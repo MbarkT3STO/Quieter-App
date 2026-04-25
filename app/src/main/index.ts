@@ -1,9 +1,9 @@
 /**
  * Quieter — Electron main process entry point.
- * Sets up BrowserWindow, registers IPC handlers, and starts system polling.
+ * macOS only. No default menu. DevTools disabled.
  */
 
-import { app, BrowserWindow, shell, nativeTheme, nativeImage } from 'electron';
+import { app, BrowserWindow, shell, nativeTheme, nativeImage, Menu } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -14,13 +14,18 @@ import { APP_NAME } from '../shared/constants.js';
 
 const CONTEXT = 'Main';
 
+// ── macOS-only guard ──────────────────────────────────────────────────────────
+if (process.platform !== 'darwin') {
+  process.stderr.write('Quieter only runs on macOS.\n');
+  process.exit(1);
+}
+
 let mainWindow: BrowserWindow | null = null;
 
 /**
  * Create the main application window.
  */
 function createWindow(): void {
-  // Resolve icon path relative to the app resources
   const iconPath = path.join(__dirname, '../../src/Logos/AppIcon512.png');
   const appIcon = nativeImage.createFromPath(iconPath);
 
@@ -43,6 +48,7 @@ function createWindow(): void {
       nodeIntegration: false,
       sandbox: false,
       webSecurity: true,
+      devTools: false,          // disable DevTools entirely
     },
   });
 
@@ -50,6 +56,11 @@ function createWindow(): void {
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
     logger.info(CONTEXT, 'Main window shown');
+  });
+
+  // Block any attempt to open DevTools
+  mainWindow.webContents.on('devtools-opened', () => {
+    mainWindow?.webContents.closeDevTools();
   });
 
   // Open external links in default browser
@@ -84,8 +95,10 @@ app.whenReady().then(() => {
     nodeVersion: process.versions['node'],
   });
 
-  // Apply nativeTheme based on saved settings so prefers-color-scheme
-  // in the renderer correctly reflects the user's choice.
+  // ── Remove the default Electron menu entirely ─────────────────────────────
+  Menu.setApplicationMenu(null);
+
+  // ── Apply nativeTheme from saved settings ─────────────────────────────────
   const settingsFilePath = path.join(os.homedir(), '.quieter', 'settings.json');
   let savedTheme: 'dark' | 'light' | 'system' = 'dark';
   try {
@@ -120,21 +133,27 @@ app.on('window-all-closed', () => {
   SystemInfoService.getInstance().stopPolling();
   logger.info(CONTEXT, 'All windows closed, quitting');
   logger.close();
-
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // On macOS apps stay active until Cmd+Q — standard behaviour
+  // (no app.quit() here; the dock icon remains)
 });
 
 /**
- * Security: prevent new window creation
+ * Security: block all navigation away from the app origin,
+ * and prevent any new window / DevTools from opening.
  */
 app.on('web-contents-created', (_event, contents) => {
+  // Block navigation to external URLs
   contents.on('will-navigate', (event, url) => {
     const parsedUrl = new URL(url);
     if (parsedUrl.origin !== 'null' && !url.startsWith('file://')) {
       event.preventDefault();
       logger.warn(CONTEXT, `Blocked navigation to: ${url}`);
     }
+  });
+
+  // Close DevTools immediately if somehow opened
+  contents.on('devtools-opened', () => {
+    contents.closeDevTools();
+    logger.warn(CONTEXT, 'DevTools open attempt blocked');
   });
 });
