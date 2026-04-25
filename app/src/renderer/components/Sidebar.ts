@@ -100,7 +100,7 @@ export class Sidebar extends Component {
       <div class="sidebar-toggle">
         <div class="sidebar-brand ${this.collapsed ? 'hidden' : ''}">
           <img
-            src="./assets/icons/AppIcon32.png"
+            src="./AppIcon32.png"
             width="20"
             height="20"
             alt=""

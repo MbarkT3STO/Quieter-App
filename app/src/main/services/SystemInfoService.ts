@@ -61,6 +61,14 @@ export class SystemInfoService {
   public setServiceCounts(active: number, disabled: number): void {
     this.activeCount = active;
     this.disabledCount = disabled;
+    // Update cached stats immediately so the next getStats() call returns fresh counts
+    if (this.latestStats !== null) {
+      this.latestStats = {
+        ...this.latestStats,
+        activeServicesCount: active,
+        disabledServicesCount: disabled,
+      };
+    }
   }
 
   /** Update the CPU measurement method at runtime (called when settings change). */

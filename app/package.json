@@ -58,6 +58,13 @@
       ]
     },
     "files": ["out/**/*"],
+    "extraResources": [
+      {
+        "from": "src/Logos",
+        "to": "icons",
+        "filter": ["*.png", "*.icns"]
+      }
+    ],
     "directories": {
       "buildResources": "build",
       "output": "release"

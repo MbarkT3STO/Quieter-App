@@ -24,6 +24,8 @@ export class DashboardView extends Component {
   protected render(): void {
     const stats = store.get('systemStats');
     const services = store.get('services');
+    // Always compute counts from the services list — never trust stats counts
+    // since stats may be polled before services are loaded.
     const activeCount = services.filter(
       (s) => s.runtimeState.currentState === ServiceState.Enabled,
     ).length;
@@ -133,6 +135,22 @@ export class DashboardView extends Component {
     });
     this.addCleanup(statsUnsub);
 
+    // Re-render service counts when services finish loading
+    const servicesUnsub = eventBus.on('services:loaded', () => {
+      const services = store.get('services');
+      const activeCount = services.filter(
+        (s) => s.runtimeState.currentState === ServiceState.Enabled,
+      ).length;
+      const disabledCount = services.filter(
+        (s) => s.runtimeState.currentState === ServiceState.Disabled,
+      ).length;
+      const activeEl = this.queryOptional('#stat-active');
+      const disabledEl = this.queryOptional('#stat-disabled');
+      if (activeEl !== null) activeEl.textContent = String(activeCount);
+      if (disabledEl !== null) disabledEl.textContent = String(disabledCount);
+    });
+    this.addCleanup(servicesUnsub);
+
     // Update pending changes list
     const pendingUnsub = eventBus.on('pending:changed', () => {
       this.renderPendingChanges();
@@ -221,6 +239,15 @@ export class DashboardView extends Component {
       this.cpuHistory.shift();
     }
 
+    // Recompute service counts from the live services list
+    const services = store.get('services');
+    const activeCount = services.filter(
+      (s) => s.runtimeState.currentState === ServiceState.Enabled,
+    ).length;
+    const disabledCount = services.filter(
+      (s) => s.runtimeState.currentState === ServiceState.Disabled,
+    ).length;
+
     // Update DOM
     const cpuEl = this.queryOptional('#stat-cpu');
     const ramEl = this.queryOptional('#stat-ram');
@@ -232,8 +259,8 @@ export class DashboardView extends Component {
     if (cpuEl !== null) cpuEl.textContent = `${stats.cpuUsagePercent}%`;
     if (ramEl !== null) ramEl.textContent = `${stats.ramUsedGB}G`;
     if (ramSubEl !== null) ramSubEl.textContent = `of ${stats.ramTotalGB} GB (${stats.ramUsedPercent}%)`;
-    if (activeEl !== null) activeEl.textContent = String(stats.activeServicesCount);
-    if (disabledEl !== null) disabledEl.textContent = String(stats.disabledServicesCount);
+    if (activeEl !== null) activeEl.textContent = String(activeCount);
+    if (disabledEl !== null) disabledEl.textContent = String(disabledCount);
     if (sparklineVal !== null) sparklineVal.textContent = `${stats.cpuUsagePercent}%`;
 
     this.drawSparkline();

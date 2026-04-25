@@ -26,7 +26,13 @@ let mainWindow: BrowserWindow | null = null;
  * Create the main application window.
  */
 function createWindow(): void {
-  const iconPath = path.join(__dirname, '../../src/Logos/AppIcon512.png');
+  // In dev: src/Logos/ relative to project root.
+  // In production: bundled into Resources/ via extraResources in electron-builder.
+  const isDev = process.env['ELECTRON_RENDERER_URL'] !== undefined;
+  const iconPath = isDev
+    ? path.join(app.getAppPath(), 'src/Logos/AppIcon512.png')
+    : path.join(process.resourcesPath, 'icons/AppIcon512.png');
+
   const appIcon = nativeImage.createFromPath(iconPath);
 
   mainWindow = new BrowserWindow({

@@ -38,7 +38,7 @@ export class SettingsView extends Component {
         <div class="about-card-header">
           <div class="about-card-glow" aria-hidden="true"></div>
           <img
-            src="./assets/icons/AppIcon128.png"
+            src="./AppIcon128.png"
             width="72"
             height="72"
             alt="Quieter app icon"
