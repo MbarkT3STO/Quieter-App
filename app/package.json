@@ -5,7 +5,7 @@
   "main": "out/main/index.js",
   "type": "module",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "clear && npm run build && electron-vite dev",
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
