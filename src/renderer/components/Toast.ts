@@ -47,30 +47,50 @@ export class ToastContainer extends Component {
   public show(event: ToastEvent): void {
     const { type, message, duration = 4000 } = event;
 
+    // Split message into title + body if it contains ': '
+    const colonIdx = message.indexOf(': ');
+    const title = colonIdx > -1 ? message.slice(0, colonIdx) : this.defaultTitle(type);
+    const body  = colonIdx > -1 ? message.slice(colonIdx + 2) : message;
+
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.setAttribute('role', 'alert');
     toast.innerHTML = `
-      <span class="toast-icon" aria-hidden="true">${ICONS[type]}</span>
-      <span class="toast-message">${message}</span>
+      <div class="toast-icon-wrap" aria-hidden="true">
+        <span class="toast-icon">${ICONS[type]}</span>
+      </div>
+      <div class="toast-content">
+        <div class="toast-title">${title}</div>
+        <div class="toast-message">${body}</div>
+      </div>
       <button class="toast-close" aria-label="Dismiss notification">
         ${CLOSE_ICON}
       </button>
+      ${duration > 0 ? `<div class="toast-progress" style="animation-duration: ${duration}ms"></div>` : ''}
     `;
 
     const dismiss = (): void => {
       toast.classList.add('removing');
-      setTimeout(() => toast.remove(), 300);
+      setTimeout(() => toast.remove(), 250);
     };
 
-    const closeBtn = toast.querySelector('.toast-close');
-    closeBtn?.addEventListener('click', dismiss);
+    toast.querySelector('.toast-close')?.addEventListener('click', dismiss);
 
     this.element.appendChild(toast);
 
     if (duration > 0) {
       setTimeout(dismiss, duration);
     }
+  }
+
+  private defaultTitle(type: ToastEvent['type']): string {
+    const titles: Record<ToastEvent['type'], string> = {
+      success: 'Success',
+      error: 'Error',
+      warning: 'Warning',
+      info: 'Info',
+    };
+    return titles[type];
   }
 }
 

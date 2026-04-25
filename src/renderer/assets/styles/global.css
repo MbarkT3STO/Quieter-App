@@ -38,7 +38,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--space-6);
-  padding-bottom: calc(var(--space-6) + var(--apply-bar-height));
+  padding-bottom: calc(var(--space-6) + var(--apply-bar-height) + var(--space-6));
   margin-left: var(--sidebar-current-width, var(--sidebar-width));
 }
 
@@ -144,15 +144,18 @@ body {
 .btn-primary {
   background: var(--color-accent);
   color: #fff;
+  box-shadow: 0 1px 3px rgba(108,99,255,0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--color-accent-hover);
   box-shadow: var(--shadow-accent);
+  transform: translateY(-1px);
 }
 
 .btn-primary:active:not(:disabled) {
   background: var(--color-accent-active);
+  transform: translateY(0);
 }
 
 .btn-ghost {
@@ -303,7 +306,7 @@ body {
 /* ── Service grid ─────────────────────────────────────────────────────────── */
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: var(--space-4);
 }
 
@@ -316,11 +319,12 @@ body {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .page-subtitle {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   margin-top: var(--space-1);
 }
 

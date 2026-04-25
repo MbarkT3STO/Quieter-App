@@ -20,6 +20,7 @@
   left: 0;
   bottom: 0;
   z-index: var(--z-raised);
+  box-shadow: 2px 0 16px rgba(0,0,0,0.08);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -206,7 +207,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);

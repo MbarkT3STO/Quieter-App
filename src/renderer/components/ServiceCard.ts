@@ -63,41 +63,44 @@ export class ServiceCard extends Component {
     this.setHTML(`
       <div class="service-card-header">
         <div class="service-card-title-row">
-          <span class="service-card-icon" aria-hidden="true">${categoryIcon}</span>
+          <span class="service-card-icon-wrap" aria-hidden="true">
+            <span class="service-card-icon">${categoryIcon}</span>
+          </span>
           <span class="service-card-name">${service.name}</span>
         </div>
         <div class="badge-placeholder"></div>
       </div>
 
-      <div class="service-card-meta">
-        <span class="service-card-category">${service.category}</span>
-        ${service.requiresAdmin ? '<span class="badge badge-moderate" title="Requires admin">Admin</span>' : ''}
-        ${service.requiresRestart ? '<span class="badge badge-moderate" title="Requires restart">Restart</span>' : ''}
-      </div>
+      <div class="service-card-body">
+        <div class="service-card-meta">
+          <span class="service-card-category">${service.category}</span>
+          ${service.requiresAdmin ? '<span class="badge badge-moderate" title="Requires admin">Admin</span>' : ''}
+          ${service.requiresRestart ? '<span class="badge badge-moderate" title="Requires restart">Restart</span>' : ''}
+        </div>
 
-      <div class="service-card-impact" aria-label="Performance impact">
-        <div class="impact-item">
-          <span>CPU</span>
-          <div class="impact-bar-track" role="meter" aria-label="CPU impact: ${service.impact.cpu}">
-            <div class="impact-bar-fill ${service.impact.cpu}"></div>
+        <div class="service-card-impact" aria-label="Performance impact">
+          <div class="impact-item">
+            <span>CPU</span>
+            <div class="impact-bar-track" role="meter" aria-label="CPU impact: ${service.impact.cpu}">
+              <div class="impact-bar-fill ${service.impact.cpu}"></div>
+            </div>
+          </div>
+          <div class="impact-item">
+            <span>RAM</span>
+            <div class="impact-bar-track" role="meter" aria-label="RAM impact: ${service.impact.ram}">
+              <div class="impact-bar-fill ${service.impact.ram}"></div>
+            </div>
           </div>
         </div>
-        <div class="impact-item">
-          <span>RAM</span>
-          <div class="impact-bar-track" role="meter" aria-label="RAM impact: ${service.impact.ram}">
-            <div class="impact-bar-fill ${service.impact.ram}"></div>
-          </div>
+
+        <div>
+          <p class="service-card-description${this.descExpanded ? ' expanded' : ''}">${service.description}</p>
+          <button class="service-card-expand-btn" aria-expanded="${this.descExpanded}">
+            ${this.descExpanded ? 'Show less' : 'Show more'}
+          </button>
         </div>
-      </div>
 
-      <div>
-        <p class="service-card-description${this.descExpanded ? ' expanded' : ''}">${service.description}</p>
-        <button class="service-card-expand-btn" aria-expanded="${this.descExpanded}">
-          ${this.descExpanded ? 'Show less' : 'Show more'}
-        </button>
-      </div>
-
-      <div class="service-card-effects${this.effectsVisible ? ' visible' : ''}">
+        <div class="service-card-effects${this.effectsVisible ? ' visible' : ''}">
         <div class="effect-item">
           <span class="effect-icon gain" aria-hidden="true">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
@@ -124,6 +127,8 @@ export class ServiceCard extends Component {
           Show effects
         </button>
       ` : ''}
+
+      </div><!-- end service-card-body -->
 
       <div class="service-card-footer">
         <div class="service-card-state">

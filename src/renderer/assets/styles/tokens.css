@@ -1,93 +1,96 @@
 /**
- * PeakMac Design Tokens
- * All CSS custom properties (design tokens) for the entire app.
- * Theme is applied via [data-theme="dark"|"light"] on <html>.
- * Default (no attribute) = dark.
+ * Quieter Design Tokens
+ * Theme applied via [data-theme="dark"|"light"] on <html>.
  */
 
-/* ── Dark Theme (default) ────────────────────────────────────────────────── */
+/* ── Dark Theme ──────────────────────────────────────────────────────────── */
 :root,
 [data-theme="dark"] {
-  /* Backgrounds */
-  --color-bg-base: #0D0D0F;
-  --color-bg-surface: #16161A;
-  --color-bg-elevated: #1E1E24;
-  --color-bg-overlay: #26262E;
+  --color-bg-base: #0A0A0D;
+  --color-bg-surface: #111116;
+  --color-bg-elevated: #18181F;
+  --color-bg-overlay: #22222C;
+  --color-bg-card: #14141A;
 
-  /* Borders */
-  --color-border: rgba(255, 255, 255, 0.07);
-  --color-border-hover: rgba(255, 255, 255, 0.13);
-  --color-border-focus: rgba(108, 99, 255, 0.5);
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-hover: rgba(255, 255, 255, 0.12);
+  --color-border-focus: rgba(108, 99, 255, 0.55);
+  --color-border-accent: rgba(108, 99, 255, 0.2);
 
-  /* Accent */
   --color-accent: #6C63FF;
   --color-accent-hover: #7B73FF;
   --color-accent-active: #5A52E0;
-  --color-accent-glow: rgba(108, 99, 255, 0.18);
+  --color-accent-glow: rgba(108, 99, 255, 0.2);
   --color-accent-subtle: rgba(108, 99, 255, 0.1);
+  --color-accent-muted: rgba(108, 99, 255, 0.06);
 
-  /* Semantic */
   --color-success: #34D399;
   --color-success-subtle: rgba(52, 211, 153, 0.12);
+  --color-success-muted: rgba(52, 211, 153, 0.06);
   --color-warning: #FBBF24;
   --color-warning-subtle: rgba(251, 191, 36, 0.12);
+  --color-warning-muted: rgba(251, 191, 36, 0.06);
   --color-danger: #F87171;
   --color-danger-subtle: rgba(248, 113, 113, 0.12);
+  --color-danger-muted: rgba(248, 113, 113, 0.06);
 
-  /* Text */
-  --color-text-primary: #F0EFF5;
-  --color-text-secondary: #9B9AAB;
-  --color-text-muted: #5C5B6E;
-  --color-text-inverse: #0D0D0F;
+  --color-text-primary: #EEEDF5;
+  --color-text-secondary: #8E8DA0;
+  --color-text-muted: #52516A;
+  --color-text-inverse: #0A0A0D;
 
-  /* Topbar blur */
-  --topbar-bg: rgba(13, 13, 15, 0.85);
-  /* Apply bar blur */
-  --applybar-bg: rgba(22, 22, 26, 0.95);
+  --topbar-bg: rgba(10, 10, 13, 0.88);
+  --applybar-bg: rgba(17, 17, 22, 0.96);
+
+  /* Gradient helpers */
+  --gradient-card-header: linear-gradient(135deg, var(--color-bg-elevated) 0%, var(--color-bg-card) 100%);
+  --gradient-accent-subtle: linear-gradient(135deg, rgba(108,99,255,0.08) 0%, transparent 60%);
 }
 
 /* ── Light Theme ─────────────────────────────────────────────────────────── */
 [data-theme="light"] {
-  /* Backgrounds */
-  --color-bg-base: #F5F5F7;
+  --color-bg-base: #F2F2F7;
   --color-bg-surface: #FFFFFF;
-  --color-bg-elevated: #F0F0F5;
-  --color-bg-overlay: #E8E8EF;
+  --color-bg-elevated: #F7F7FA;
+  --color-bg-overlay: #EBEBF0;
+  --color-bg-card: #FAFAFA;
 
-  /* Borders */
-  --color-border: rgba(0, 0, 0, 0.08);
-  --color-border-hover: rgba(0, 0, 0, 0.15);
-  --color-border-focus: rgba(108, 99, 255, 0.5);
+  --color-border: rgba(0, 0, 0, 0.07);
+  --color-border-hover: rgba(0, 0, 0, 0.14);
+  --color-border-focus: rgba(91, 82, 232, 0.5);
+  --color-border-accent: rgba(91, 82, 232, 0.18);
 
-  /* Accent — same purple, slightly deeper for light bg contrast */
   --color-accent: #5B52E8;
   --color-accent-hover: #6C63FF;
   --color-accent-active: #4A42D0;
-  --color-accent-glow: rgba(91, 82, 232, 0.15);
+  --color-accent-glow: rgba(91, 82, 232, 0.14);
   --color-accent-subtle: rgba(91, 82, 232, 0.08);
+  --color-accent-muted: rgba(91, 82, 232, 0.04);
 
-  /* Semantic */
   --color-success: #059669;
   --color-success-subtle: rgba(5, 150, 105, 0.1);
+  --color-success-muted: rgba(5, 150, 105, 0.05);
   --color-warning: #D97706;
   --color-warning-subtle: rgba(217, 119, 6, 0.1);
+  --color-warning-muted: rgba(217, 119, 6, 0.05);
   --color-danger: #DC2626;
   --color-danger-subtle: rgba(220, 38, 38, 0.08);
+  --color-danger-muted: rgba(220, 38, 38, 0.04);
 
-  /* Text */
-  --color-text-primary: #111118;
-  --color-text-secondary: #4B4B63;
-  --color-text-muted: #9090A8;
-  --color-text-inverse: #F0EFF5;
+  --color-text-primary: #0D0D14;
+  --color-text-secondary: #44445A;
+  --color-text-muted: #8888A0;
+  --color-text-inverse: #EEEDF5;
 
-  /* Topbar / apply bar */
-  --topbar-bg: rgba(245, 245, 247, 0.88);
-  --applybar-bg: rgba(255, 255, 255, 0.95);
+  --topbar-bg: rgba(242, 242, 247, 0.9);
+  --applybar-bg: rgba(255, 255, 255, 0.96);
+
+  --gradient-card-header: linear-gradient(135deg, var(--color-bg-elevated) 0%, var(--color-bg-surface) 100%);
+  --gradient-accent-subtle: linear-gradient(135deg, rgba(91,82,232,0.06) 0%, transparent 60%);
 }
 
-/* ── Shared non-color tokens (theme-independent) ─────────────────────────── */
+/* ── Shared tokens ───────────────────────────────────────────────────────── */
 :root {
-  /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
 
@@ -97,7 +100,7 @@
   --font-size-md: 15px;
   --font-size-lg: 16px;
   --font-size-xl: 20px;
-  --font-size-2xl: 24px;
+  --font-size-2xl: 26px;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
@@ -107,7 +110,6 @@
   --line-height-base: 1.6;
   --line-height-relaxed: 1.8;
 
-  /* Spacing */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -118,30 +120,26 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* Border Radius */
   --radius-sm: 4px;
   --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
-  --shadow-accent: 0 0 20px var(--color-accent-glow);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0,0,0,0.08);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0,0,0,0.1);
+  --shadow-accent: 0 0 0 1px var(--color-border-accent), 0 4px 20px var(--color-accent-glow);
 
-  /* Layout */
   --sidebar-width: 220px;
   --topbar-height: 48px;
   --apply-bar-height: 64px;
 
-  /* Transitions */
   --transition-fast: 120ms ease;
   --transition-base: 200ms ease;
   --transition-slow: 300ms ease;
 
-  /* Z-index */
   --z-base: 0;
   --z-raised: 10;
   --z-overlay: 100;
@@ -149,7 +147,7 @@
   --z-toast: 300;
 }
 
-/* ── Smooth theme transition ─────────────────────────────────────────────── */
+/* ── Theme transition ────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: no-preference) {
   html.theme-transitioning,
   html.theme-transitioning *,

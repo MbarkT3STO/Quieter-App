@@ -2,37 +2,57 @@
 .service-card {
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
+  border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
   position: relative;
   overflow: hidden;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .service-card {
-    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base),
+      transform var(--transition-base);
   }
 }
 
 .service-card:hover {
   border-color: var(--color-border-hover);
   box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .service-card.pending-change {
-  border-color: rgba(108, 99, 255, 0.3);
-  box-shadow: 0 0 0 1px rgba(108, 99, 255, 0.1);
+  border-color: var(--color-border-accent);
+  box-shadow: var(--shadow-accent);
 }
 
-/* ── Card Header ──────────────────────────────────────────────────────────── */
+/* ── Card Header band ─────────────────────────────────────────────────────── */
 .service-card-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  background: var(--gradient-card-header);
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle glow in top-left of header */
+.service-card-header::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  width: 80px;
+  height: 80px;
+  background: var(--color-accent-glow);
+  border-radius: 50%;
+  filter: blur(24px);
+  pointer-events: none;
+  opacity: 0.5;
 }
 
 .service-card-title-row {
@@ -41,13 +61,26 @@
   gap: var(--space-2);
   flex: 1;
   min-width: 0;
+  position: relative;
+}
+
+/* Icon container with colored background */
+.service-card-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-accent);
 }
 
 .service-card-icon {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
-  color: var(--color-text-secondary);
 }
 
 .service-card-name {
@@ -59,36 +92,50 @@
   white-space: nowrap;
 }
 
-/* ── Category Label ───────────────────────────────────────────────────────── */
+/* ── Card body ────────────────────────────────────────────────────────────── */
+.service-card-body {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+/* ── Category + meta row ──────────────────────────────────────────────────── */
 .service-card-meta {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .service-card-category {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   font-weight: var(--font-weight-medium);
+  background: var(--color-bg-elevated);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
 }
 
 /* ── Impact Bars ──────────────────────────────────────────────────────────── */
 .service-card-impact {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .impact-item {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
 .impact-bar-track {
-  width: 40px;
-  height: 4px;
+  width: 48px;
+  height: 5px;
   background: var(--color-bg-overlay);
   border-radius: var(--radius-full);
   overflow: hidden;
@@ -99,10 +146,10 @@
   border-radius: var(--radius-full);
 }
 
-.impact-bar-fill.none { width: 0%; background: var(--color-text-muted); }
-.impact-bar-fill.low { width: 33%; background: var(--color-success); }
-.impact-bar-fill.medium { width: 66%; background: var(--color-warning); }
-.impact-bar-fill.high { width: 100%; background: var(--color-danger); }
+.impact-bar-fill.none  { width: 0%; }
+.impact-bar-fill.low   { width: 33%; background: var(--color-success); }
+.impact-bar-fill.medium{ width: 66%; background: var(--color-warning); }
+.impact-bar-fill.high  { width: 100%; background: var(--color-danger); }
 
 /* ── Description ──────────────────────────────────────────────────────────── */
 .service-card-description {
@@ -126,12 +173,18 @@
   cursor: pointer;
   margin-top: var(--space-1);
   display: inline-block;
+  font-weight: var(--font-weight-medium);
+}
+
+.service-card-expand-btn:hover {
+  text-decoration: underline;
 }
 
 /* ── Effects Section ──────────────────────────────────────────────────────── */
 .service-card-effects {
   background: var(--color-bg-elevated);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: var(--space-3);
   display: none;
   gap: var(--space-3);
@@ -157,17 +210,17 @@
 .effect-icon.gain { color: var(--color-success); }
 .effect-icon.lose { color: var(--color-warning); }
 
-.effect-text {
-  color: var(--color-text-secondary);
-}
+.effect-text { color: var(--color-text-secondary); }
 
 /* ── Card Footer ──────────────────────────────────────────────────────────── */
 .service-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
 }
 
 .service-card-state {
@@ -175,26 +228,27 @@
   color: var(--color-text-muted);
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .state-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.state-dot.enabled { background: var(--color-success); }
+.state-dot.enabled  { background: var(--color-success); box-shadow: 0 0 6px var(--color-success); }
 .state-dot.disabled { background: var(--color-text-muted); }
-.state-dot.unknown { background: var(--color-warning); }
+.state-dot.unknown  { background: var(--color-warning); }
 
-/* ── Pending indicator ────────────────────────────────────────────────────── */
+/* ── Pending badge ────────────────────────────────────────────────────────── */
 .pending-badge {
   font-size: var(--font-size-xs);
   color: var(--color-accent);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   background: var(--color-accent-subtle);
+  border: 1px solid var(--color-border-accent);
   padding: 2px var(--space-2);
   border-radius: var(--radius-full);
 }
