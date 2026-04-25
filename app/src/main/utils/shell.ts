@@ -12,6 +12,9 @@ import { SHELL_TIMEOUT_MS } from '../../shared/constants.js';
 import type { Result } from '../../shared/types.js';
 import { logger } from './logger.js';
 
+/** Path to the defaults binary — used to suppress expected "key not found" errors */
+const DEFAULTS_CMD = '/usr/bin/defaults';
+
 const execFileAsync = promisify(execFile);
 
 export interface ShellResult {
@@ -97,12 +100,23 @@ export async function safeExec(
       };
     }
 
-    logger.error(context, `Command failed (exit ${exitCode})`, {
-      command,
-      args,
-      stderr,
-      stdout,
-    });
+    // 'defaults read' exits 1 when a key simply doesn't exist — that's normal,
+    // not an error worth logging at ERROR level.
+    const isExpectedMissing =
+      command === DEFAULTS_CMD &&
+      exitCode === 1 &&
+      stderr.includes('does not exist');
+
+    if (isExpectedMissing) {
+      logger.debug(context, `defaults key not set (using system default)`, { command, args });
+    } else {
+      logger.error(context, `Command failed (exit ${exitCode})`, {
+        command,
+        args,
+        stderr,
+        stdout,
+      });
+    }
 
     return {
       success: false,
