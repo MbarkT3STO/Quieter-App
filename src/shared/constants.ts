@@ -49,7 +49,7 @@ export const DEFAULT_SETTINGS = {
 };
 
 /** GitHub repository URL */
-export const GITHUB_URL = 'https://github.com/quieter-app/quieter';
+export const GITHUB_URL = 'https://github.com/MbarkT3STO/Quieter-App';
 
 /** Learn more URL */
-export const LEARN_MORE_URL = 'https://github.com/quieter-app/quieter#readme';
+export const LEARN_MORE_URL = 'https://github.com/MbarkT3STO/Quieter-App#readme';

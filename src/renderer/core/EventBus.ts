@@ -3,7 +3,7 @@
  * Decouples components from each other.
  */
 
-import type { ServiceChange, ApplyProgress, SystemStats } from '../../shared/types.js';
+import type { ApplyProgress, SystemStats } from '../../shared/types.js';
 
 // ─── Event Map ────────────────────────────────────────────────────────────────
 

@@ -73,7 +73,7 @@ export class TopBar extends Component {
     if (btn !== null) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
 
     if (result.success) {
-      store.setServices(result.data as import('../../shared/types.js').ServiceWithState[]);
+      store.setServices(result.data);
       showToast('success', 'Service states refreshed');
     } else {
       showToast('error', 'Failed to refresh service states');

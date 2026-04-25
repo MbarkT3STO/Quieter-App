@@ -155,7 +155,7 @@ export class ApplyBar extends Component {
     if (countEl !== null) countEl.style.display = '';
 
     if (result.success) {
-      const applyResult = result.data as import('../../shared/types.js').ApplyResult;
+      const applyResult = result.data;
       this.progressBar.setProgress(100, 'Done', 'success');
 
       setTimeout(() => {
@@ -169,7 +169,7 @@ export class ApplyBar extends Component {
       // Refresh service states
       const servicesResult = await window.peakMacAPI.getServices();
       if (servicesResult.success) {
-        store.setServices(servicesResult.data as import('../../shared/types.js').ServiceWithState[]);
+        store.setServices(servicesResult.data);
       }
     } else {
       this.progressBar.setProgress(100, 'Failed', 'error');

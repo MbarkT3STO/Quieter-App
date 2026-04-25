@@ -9,7 +9,7 @@ import { Component } from '../core/Component.js';
 import { router } from '../core/Router.js';
 import { store } from '../core/Store.js';
 import { eventBus } from '../core/EventBus.js';
-import { ServiceCategory } from '../../shared/types.js';
+import { ServiceCategory, type SystemStats } from '../../shared/types.js';
 
 const STORAGE_KEY = 'peakmac:sidebar-collapsed';
 
@@ -273,7 +273,7 @@ export class Sidebar extends Component {
     });
   }
 
-  private updateStats(stats: import('../../shared/types.js').SystemStats): void {
+  private updateStats(stats: SystemStats): void {
     const cpuEl = this.queryOptional<HTMLElement>('#sidebar-cpu');
     const ramEl = this.queryOptional<HTMLElement>('#sidebar-ram');
     const activeEl = this.queryOptional<HTMLElement>('#sidebar-active');

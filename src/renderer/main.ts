@@ -128,25 +128,22 @@ async function loadInitialData(): Promise<void> {
     ]);
 
     if (servicesResult.success) {
-      store.setServices(
-        servicesResult.data as import('../shared/types.js').ServiceWithState[],
-      );
+      store.setServices(servicesResult.data);
     } else {
       eventBus.emit('services:error', servicesResult.error ?? 'Failed to load services');
     }
 
     if (statsResult.success) {
-      store.setStats(statsResult.data as import('../shared/types.js').SystemStats);
+      store.setStats(statsResult.data);
     }
 
     if (settingsResult.success) {
-      store.setSettings(settingsResult.data as import('../shared/types.js').AppSettings);
-      // Apply saved theme immediately on startup
-      themeManager.apply((settingsResult.data as import('../shared/types.js').AppSettings).theme);
+      store.setSettings(settingsResult.data);
+      themeManager.apply(settingsResult.data.theme);
     }
 
     if (backupResult.success) {
-      store.set('hasBackup', backupResult.data as boolean);
+      store.set('hasBackup', backupResult.data);
     }
   } finally {
     store.set('isLoading', false);
@@ -162,7 +159,7 @@ function startStatsPolling(): void {
   const poll = (): void => {
     void window.peakMacAPI.getSystemStats().then((result) => {
       if (result.success) {
-        store.setStats(result.data as import('../shared/types.js').SystemStats);
+        store.setStats(result.data);
       }
     });
   };

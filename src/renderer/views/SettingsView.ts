@@ -33,21 +33,76 @@ export class SettingsView extends Component {
       </div>
 
       <!-- About -->
-      <div class="about-section">
-        <div class="about-app-icon" aria-hidden="true">
-          <img src="./assets/icons/AppIcon128.png" width="56" height="56" alt="Quieter icon" style="border-radius: 14px;" />
-        </div>
-        <div>
-          <div class="about-app-name">${APP_NAME}</div>
-          <div class="about-app-version">Version ${APP_VERSION}</div>
-          <div class="about-links">
-            <a class="about-link" id="link-github" href="#" aria-label="Open GitHub repository">
-              <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" aria-hidden="true">
-                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-              </svg>
-              GitHub
-            </a>
+      <div class="about-card">
+        <!-- Gradient header band -->
+        <div class="about-card-header">
+          <div class="about-card-glow" aria-hidden="true"></div>
+          <img
+            src="./assets/icons/AppIcon128.png"
+            width="72"
+            height="72"
+            alt="Quieter app icon"
+            class="about-card-icon"
+          />
+          <div class="about-card-identity">
+            <h2 class="about-card-name">${APP_NAME}</h2>
+            <span class="about-card-tagline">macOS System Optimizer</span>
           </div>
+        </div>
+
+        <!-- Meta row -->
+        <div class="about-card-meta">
+          <div class="about-meta-item">
+            <span class="about-meta-label">Version</span>
+            <span class="about-meta-value">${APP_VERSION}</span>
+          </div>
+          <div class="about-meta-divider" aria-hidden="true"></div>
+          <div class="about-meta-item">
+            <span class="about-meta-label">Platform</span>
+            <span class="about-meta-value">macOS 12+</span>
+          </div>
+          <div class="about-meta-divider" aria-hidden="true"></div>
+          <div class="about-meta-item">
+            <span class="about-meta-label">Services</span>
+            <span class="about-meta-value">60 curated</span>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <p class="about-card-desc">
+          Quieter helps you reclaim performance on aging Macs by selectively managing
+          background services — safely, transparently, and reversibly.
+        </p>
+
+        <!-- Action links -->
+        <div class="about-card-actions">
+          <a class="about-action-btn" id="link-github" href="#" aria-label="View source on GitHub">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+              <path fill-rule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clip-rule="evenodd"/>
+            </svg>
+            View on GitHub
+          </a>
+          <a class="about-action-btn" id="link-readme" href="#" aria-label="Read documentation">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+              <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/>
+            </svg>
+            Documentation
+          </a>
+          <a class="about-action-btn about-action-btn--issue" id="link-issue" href="#" aria-label="Report an issue">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden="true">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            Report Issue
+          </a>
+        </div>
+
+        <!-- Footer -->
+        <div class="about-card-footer">
+          <span>Built with Electron + TypeScript</span>
+          <span class="about-footer-dot" aria-hidden="true">·</span>
+          <span>Open Source</span>
+          <span class="about-footer-dot" aria-hidden="true">·</span>
+          <span>MIT License</span>
         </div>
       </div>
 
@@ -211,6 +266,20 @@ export class SettingsView extends Component {
       window.open(GITHUB_URL, '_blank');
     });
 
+    // Readme link
+    const readmeLink = this.queryOptional<HTMLAnchorElement>('#link-readme');
+    readmeLink?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.open(`${GITHUB_URL}#readme`, '_blank');
+    });
+
+    // Report issue link
+    const issueLink = this.queryOptional<HTMLAnchorElement>('#link-issue');
+    issueLink?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.open(`${GITHUB_URL}/issues`, '_blank');
+    });
+
     // Restore button
     const restoreBtn = this.queryOptional<HTMLButtonElement>('#btn-restore');
     restoreBtn?.addEventListener('click', () => {
@@ -226,7 +295,7 @@ export class SettingsView extends Component {
     // Enable all button
     const enableAllBtn = this.queryOptional<HTMLButtonElement>('#btn-enable-all');
     enableAllBtn?.addEventListener('click', () => {
-      void this.handleEnableAll();
+      this.handleEnableAll();
     });
   }
 
@@ -293,7 +362,7 @@ export class SettingsView extends Component {
     showToast('success', 'Report exported successfully');
   }
 
-  private async handleEnableAll(): Promise<void> {
+  private handleEnableAll(): void {
     const services = store.get('services');
 
     services.forEach((s) => {

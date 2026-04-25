@@ -8,12 +8,12 @@ import { eventBus } from '../core/EventBus.js';
 import { router } from '../core/Router.js';
 import { showToast } from '../components/Toast.js';
 import type { SystemStats } from '../../shared/types.js';
-import { ChangeAction, RiskLevel, ServiceCategory } from '../../shared/types.js';
+import { ChangeAction, RiskLevel, ServiceCategory, ServiceState } from '../../shared/types.js';
 
 const CPU_HISTORY_LENGTH = 30;
 
 export class DashboardView extends Component {
-  private cpuHistory: number[] = new Array(CPU_HISTORY_LENGTH).fill(0);
+  private cpuHistory: number[] = Array.from<number>({ length: CPU_HISTORY_LENGTH }).fill(0);
   private canvasCtx: CanvasRenderingContext2D | null = null;
   private animFrame: number | null = null;
 
@@ -25,10 +25,10 @@ export class DashboardView extends Component {
     const stats = store.get('systemStats');
     const services = store.get('services');
     const activeCount = services.filter(
-      (s) => s.runtimeState.currentState === 'enabled',
+      (s) => s.runtimeState.currentState === ServiceState.Enabled,
     ).length;
     const disabledCount = services.filter(
-      (s) => s.runtimeState.currentState === 'disabled',
+      (s) => s.runtimeState.currentState === ServiceState.Disabled,
     ).length;
 
     this.setHTML(`
@@ -245,7 +245,7 @@ export class DashboardView extends Component {
       const safeEnabled = services.filter(
         (s) =>
           s.risk === RiskLevel.Safe &&
-          s.runtimeState.currentState === 'enabled',
+          s.runtimeState.currentState === ServiceState.Enabled,
       );
 
       if (safeEnabled.length === 0) {

@@ -6,9 +6,8 @@ import { Component } from '../core/Component.js';
 import { Toggle } from './Toggle.js';
 import { Badge } from './Badge.js';
 import { store } from '../core/Store.js';
-import { eventBus } from '../core/EventBus.js';
 import type { ServiceWithState } from '../../shared/types.js';
-import { ServiceState, ChangeAction, ImpactLevel } from '../../shared/types.js';
+import { ServiceState, ChangeAction } from '../../shared/types.js';
 
 const CATEGORY_ICONS: Record<string, string> = {
   Performance: `<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>`,

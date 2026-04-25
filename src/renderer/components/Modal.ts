@@ -163,7 +163,7 @@ export function showOnboardingModal(onDone: () => void): void {
     cancelLabel: 'Learn More',
     onConfirm: onDone,
     onCancel: () => {
-      window.open('https://github.com/quieter-app/quieter#readme', '_blank');
+      window.open('https://github.com/MbarkT3STO/Quieter-App#readme', '_blank');
       onDone();
     },
   });
