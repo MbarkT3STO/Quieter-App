@@ -3,7 +3,7 @@
  * Every handler is wrapped in try/catch and returns a typed Result.
  */
 
-import { ipcMain, BrowserWindow, app } from 'electron';
+import { ipcMain, BrowserWindow, app, nativeTheme } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -182,6 +182,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
 
         // Apply CPU method change immediately — no restart needed
         sysInfo.setCpuMethod(settings.cpuMethod ?? CpuMethod.LoadAvg);
+
+        // Sync nativeTheme so prefers-color-scheme in renderer is accurate
+        nativeTheme.themeSource = settings.theme === 'system' ? 'system' : settings.theme;
 
         logger.info(CONTEXT, 'Settings saved', { settings });
         return { success: true, data: undefined };

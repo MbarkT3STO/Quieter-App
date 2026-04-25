@@ -5,6 +5,8 @@
 
 import { app, BrowserWindow, shell, nativeTheme, nativeImage } from 'electron';
 import path from 'path';
+import fs from 'fs';
+import os from 'os';
 import { registerIpcHandlers } from './ipc/handlers.js';
 import { SystemInfoService } from './services/SystemInfoService.js';
 import { logger } from './utils/logger.js';
@@ -82,8 +84,18 @@ app.whenReady().then(() => {
     nodeVersion: process.versions['node'],
   });
 
-  // Apply dark theme
-  nativeTheme.themeSource = 'dark';
+  // Apply nativeTheme based on saved settings so prefers-color-scheme
+  // in the renderer correctly reflects the user's choice.
+  const settingsFilePath = path.join(os.homedir(), '.quieter', 'settings.json');
+  let savedTheme: 'dark' | 'light' | 'system' = 'dark';
+  try {
+    if (fs.existsSync(settingsFilePath)) {
+      const raw = fs.readFileSync(settingsFilePath, 'utf-8');
+      const parsed = JSON.parse(raw) as { theme?: 'dark' | 'light' | 'system' };
+      if (parsed.theme !== undefined) savedTheme = parsed.theme;
+    }
+  } catch { /* no settings yet — default to dark */ }
+  nativeTheme.themeSource = savedTheme === 'system' ? 'system' : savedTheme;
 
   // Register all IPC handlers
   registerIpcHandlers(() => mainWindow);
