@@ -172,7 +172,7 @@ function startStatsPolling(): void {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 bootstrap().catch((err: unknown) => {
-  console.error('PeakMac bootstrap failed:', err);
+  console.error('Quieter bootstrap failed:', err);
   const appEl = document.getElementById('app');
   if (appEl !== null) {
     appEl.innerHTML = `
@@ -190,7 +190,7 @@ bootstrap().catch((err: unknown) => {
         padding: 24px;
         text-align: center;
       ">
-        <p style="font-size: 18px; font-weight: 600;">PeakMac failed to start</p>
+        <p style="font-size: 18px; font-weight: 600;">Quieter failed to start</p>
         <p style="color: #9B9AAB;">${err instanceof Error ? err.message : String(err)}</p>
       </div>
     `;

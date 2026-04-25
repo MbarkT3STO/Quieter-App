@@ -19,6 +19,7 @@ export interface AppEvents {
   'search:changed': string;
   'category:changed': import('../../shared/types.js').ServiceCategory | 'all';
   'route:changed': string;
+  'page:title': string;
   'settings:saved': void;
   'revert:done': void;
   'toast:show': ToastEvent;

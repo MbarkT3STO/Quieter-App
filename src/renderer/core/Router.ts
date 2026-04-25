@@ -8,6 +8,19 @@ import { eventBus } from './EventBus.js';
 
 type ViewFactory = () => Component;
 
+/** Map of route paths to their display titles */
+const ROUTE_TITLES: Record<string, string> = {
+  '#/dashboard': 'Dashboard',
+  '#/services': 'All Services',
+  '#/settings': 'Settings',
+  '#/category/Performance': 'Performance',
+  '#/category/Network': 'Network',
+  '#/category/Visuals': 'Visuals',
+  '#/category/Privacy': 'Privacy',
+  '#/category/Sync': 'Sync',
+  '#/category/Misc': 'Misc',
+};
+
 export class Router {
   private static instance: Router;
   private readonly routes = new Map<string, ViewFactory>();
@@ -78,6 +91,7 @@ export class Router {
     this.currentView = view;
 
     eventBus.emit('route:changed', normalized);
+    eventBus.emit('page:title', ROUTE_TITLES[normalized] ?? 'Quieter');
   }
 
   /**

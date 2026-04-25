@@ -9,77 +9,76 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--color-border);
-  display: flex;
+  display: grid;
+  /* 3-column: brand | page title | actions */
+  grid-template-columns: var(--sidebar-current-width, var(--sidebar-width)) 1fr auto;
   align-items: center;
-  padding: 0 var(--space-4);
-  padding-left: calc(var(--sidebar-current-width, var(--sidebar-width)) + var(--space-4));
   z-index: var(--z-overlay);
+  /* Full bar is draggable for macOS window move */
   -webkit-app-region: drag;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .topbar {
-    transition: padding-left var(--transition-base);
+    transition: grid-template-columns var(--transition-base);
   }
 }
 
-.topbar-title {
-  font-size: var(--font-size-base);
+/* ── Brand (left column — sits over the sidebar) ─────────────────────────── */
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 100%;
+  padding: 0 var(--space-3);
+  /* macOS traffic lights are ~72px wide; keep brand centered in sidebar */
+  padding-left: 80px;
+  -webkit-app-region: no-drag;
+  overflow: hidden;
+}
+
+.topbar-brand-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.topbar-brand-name {
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin-right: var(--space-6);
-  -webkit-app-region: no-drag;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.topbar-search {
-  flex: 1;
-  max-width: 400px;
-  position: relative;
-  -webkit-app-region: no-drag;
+/* Hide brand name when sidebar is collapsed — only show icon */
+.topbar-brand-name {
+  opacity: 1;
 }
 
-.topbar-search-icon {
-  position: absolute;
-  left: var(--space-3);
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-text-muted);
-  pointer-events: none;
-  width: 16px;
-  height: 16px;
-}
-
-.topbar-search-input {
-  width: 100%;
-  height: 32px;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  padding: 0 var(--space-3) 0 calc(var(--space-3) + 20px);
+/* ── Page title (center column) ──────────────────────────────────────────── */
+.topbar-page-title {
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 var(--space-4);
+  -webkit-app-region: drag;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .topbar-search-input {
-    transition: border-color var(--transition-fast), background var(--transition-fast);
-  }
-}
-
-.topbar-search-input::placeholder {
-  color: var(--color-text-muted);
-}
-
-.topbar-search-input:focus {
-  border-color: var(--color-border-focus);
-  background: var(--color-bg-overlay);
-}
-
+/* ── Actions (right column) ──────────────────────────────────────────────── */
 .topbar-actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-left: auto;
+  padding: 0 var(--space-4);
   -webkit-app-region: no-drag;
 }
 
@@ -87,11 +86,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-md);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -105,7 +105,18 @@
   color: var(--color-text-primary);
 }
 
-.topbar-action-btn svg {
-  width: 18px;
-  height: 18px;
+/* ── Pending changes badge ────────────────────────────────────────────────── */
+.topbar-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-1);
+  background: var(--color-accent);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-full);
+  line-height: 1;
 }
