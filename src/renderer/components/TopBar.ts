@@ -4,6 +4,7 @@
 
 import { Component } from '../core/Component.js';
 import { store } from '../core/Store.js';
+import { router } from '../core/Router.js';
 import { eventBus } from '../core/EventBus.js';
 import { SEARCH_DEBOUNCE_MS, APP_NAME } from '../../shared/constants.js';
 
@@ -51,7 +52,7 @@ export class TopBar extends Component {
     // Restore current search query
     searchInput.value = store.get('searchQuery');
 
-    // Search with debounce
+    // Search with debounce — auto-navigate to Services view so results are visible
     searchInput.addEventListener('input', () => {
       if (this.searchTimer !== null) {
         clearTimeout(this.searchTimer);
@@ -60,6 +61,11 @@ export class TopBar extends Component {
         const query = searchInput.value;
         store.set('searchQuery', query);
         eventBus.emit('search:changed', query);
+
+        // Navigate to All Services so the filtered results are visible
+        if (query.trim().length > 0 && router.getCurrentPath() !== '#/services') {
+          router.navigate('#/services');
+        }
       }, SEARCH_DEBOUNCE_MS);
     });
 

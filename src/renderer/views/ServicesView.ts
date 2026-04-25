@@ -94,7 +94,9 @@ export class ServicesView extends Component {
     const grid = this.queryOptional<HTMLElement>('#services-grid');
     if (grid === null) return;
 
-    const services = this.filteredServices;
+    // Always read fresh from store so search/category filters are applied
+    const services = store.getFilteredServices();
+    this.filteredServices = services;
 
     // Remove cards no longer in list
     const serviceIds = new Set(services.map((s) => s.id));
