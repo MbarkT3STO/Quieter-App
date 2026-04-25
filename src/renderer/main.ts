@@ -151,20 +151,48 @@ async function loadInitialData(): Promise<void> {
 }
 
 /**
- * Poll system stats every STATS_POLL_INTERVAL_MS.
+ * Poll system stats — pauses when the window is hidden to save CPU.
+ * Uses visibilitychange to resume when the user switches back.
  */
 function startStatsPolling(): void {
-  const POLL_INTERVAL = 3000;
+  let timer: ReturnType<typeof setInterval> | null = null;
+  let isPending = false;
 
   const poll = (): void => {
+    // Skip if a request is already in-flight
+    if (isPending) return;
+    isPending = true;
     void window.peakMacAPI.getSystemStats().then((result) => {
+      isPending = false;
       if (result.success) {
         store.setStats(result.data);
       }
     });
   };
 
-  setInterval(poll, POLL_INTERVAL);
+  const start = (): void => {
+    if (timer !== null) return;
+    poll(); // immediate on resume
+    timer = setInterval(poll, 3000);
+  };
+
+  const stop = (): void => {
+    if (timer !== null) {
+      clearInterval(timer);
+      timer = null;
+    }
+  };
+
+  // Pause polling when tab/window is hidden
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stop();
+    } else {
+      start();
+    }
+  });
+
+  start();
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────

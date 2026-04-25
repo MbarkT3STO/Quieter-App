@@ -6,6 +6,7 @@ import { Component } from '../core/Component.js';
 import { Toggle } from './Toggle.js';
 import { Badge } from './Badge.js';
 import { store } from '../core/Store.js';
+import { eventBus } from '../core/EventBus.js';
 import type { ServiceWithState } from '../../shared/types.js';
 import { ServiceState, ChangeAction } from '../../shared/types.js';
 
@@ -163,71 +164,24 @@ export class ServiceCard extends Component {
   }
 
   protected onMount(): void {
-    // Expand/collapse description
-    const expandBtn = this.queryOptional<HTMLButtonElement>('.service-card-expand-btn:not(.effects-toggle):not(.effects-show)');
-    expandBtn?.addEventListener('click', () => {
-      this.descExpanded = !this.descExpanded;
-      const desc = this.queryOptional('.service-card-description');
-      if (desc !== null) {
-        desc.classList.toggle('expanded', this.descExpanded);
-      }
-      if (expandBtn !== null) {
-        expandBtn.textContent = this.descExpanded ? 'Show less' : 'Show more';
-        expandBtn.setAttribute('aria-expanded', String(this.descExpanded));
-      }
-    });
+    this.attachCardListeners();
 
-    // Show effects
-    const showEffectsBtn = this.queryOptional<HTMLButtonElement>('.effects-show');
-    showEffectsBtn?.addEventListener('click', () => {
-      this.effectsVisible = true;
-      const effects = this.queryOptional('.service-card-effects');
-      effects?.classList.add('visible');
-      showEffectsBtn.remove();
-    });
-
-    // Hide effects
-    const hideEffectsBtn = this.queryOptional<HTMLButtonElement>('.effects-toggle');
-    hideEffectsBtn?.addEventListener('click', () => {
-      this.effectsVisible = false;
-      const effects = this.queryOptional('.service-card-effects');
-      effects?.classList.remove('visible');
-      // Re-add show button
-      const footer = this.queryOptional('.service-card-footer');
-      if (footer !== null) {
-        const showBtn = document.createElement('button');
-        showBtn.className = 'service-card-expand-btn effects-show';
-        showBtn.setAttribute('aria-expanded', 'false');
-        showBtn.textContent = 'Show effects';
-        showBtn.addEventListener('click', () => {
-          this.effectsVisible = true;
-          effects?.classList.add('visible');
-          showBtn.remove();
-        });
-        footer.parentElement?.insertBefore(showBtn, footer);
-      }
-    });
-
-    // Re-render when pending changes update
-    const unsub = store.subscribe('pendingChanges', () => {
-      const pending = store.get('pendingChanges').get(this.service.id);
-      const isPending = pending !== undefined;
+    // Listen for pending changes — use eventBus (one listener per card, not store subscription)
+    const unsub = eventBus.on('pending:changed', (pending) => {
+      const p = pending.get(this.service.id);
+      const isPending = p !== undefined;
       this.element.classList.toggle('pending-change', isPending);
 
-      // Update toggle state
       const isEnabled = this.service.runtimeState.currentState === ServiceState.Enabled;
-      const toggleChecked = isPending ? pending === ChangeAction.Enable : isEnabled;
-      this.toggle?.setChecked(toggleChecked);
+      this.toggle?.setChecked(isPending ? p === ChangeAction.Enable : isEnabled);
 
-      // Update pending badge
       const stateEl = this.queryOptional('.service-card-state');
       if (stateEl !== null) {
-        const existingBadge = stateEl.querySelector('.pending-badge');
-        existingBadge?.remove();
+        stateEl.querySelector('.pending-badge')?.remove();
         if (isPending) {
           const badge = document.createElement('span');
           badge.className = 'pending-badge';
-          badge.textContent = pending === ChangeAction.Disable ? '→ Disable' : '→ Enable';
+          badge.textContent = p === ChangeAction.Disable ? '→ Disable' : '→ Enable';
           stateEl.appendChild(badge);
         }
       }
@@ -236,13 +190,63 @@ export class ServiceCard extends Component {
   }
 
   /**
-   * Update the service data and re-render.
+   * Update the service data and re-render without leaking listeners.
+   * Only re-renders if the state actually changed.
    */
   public updateService(service: ServiceWithState): void {
+    const prevState = this.service.runtimeState.currentState;
     this.service = service;
-    this.toggle?.unmount();
-    this.badge?.unmount();
-    this.render();
-    this.onMount();
+
+    // Only do a full re-render if the runtime state changed
+    if (service.runtimeState.currentState !== prevState) {
+      this.toggle?.unmount();
+      this.badge?.unmount();
+      this.render();
+      // onMount is called by Component.mount() — call it manually here since
+      // we're updating in-place (not remounting)
+      this.attachCardListeners();
+    }
+  }
+
+  /**
+   * Attach card-level event listeners. Called once on mount and on state change re-render.
+   */
+  private attachCardListeners(): void {
+    const expandBtn = this.queryOptional<HTMLButtonElement>('.service-card-expand-btn:not(.effects-toggle):not(.effects-show)');
+    expandBtn?.addEventListener('click', () => {
+      this.descExpanded = !this.descExpanded;
+      const desc = this.queryOptional('.service-card-description');
+      desc?.classList.toggle('expanded', this.descExpanded);
+      if (expandBtn !== null) {
+        expandBtn.textContent = this.descExpanded ? 'Show less' : 'Show more';
+        expandBtn.setAttribute('aria-expanded', String(this.descExpanded));
+      }
+    });
+
+    const showEffectsBtn = this.queryOptional<HTMLButtonElement>('.effects-show');
+    showEffectsBtn?.addEventListener('click', () => {
+      this.effectsVisible = true;
+      this.queryOptional('.service-card-effects')?.classList.add('visible');
+      showEffectsBtn.remove();
+    });
+
+    const hideEffectsBtn = this.queryOptional<HTMLButtonElement>('.effects-toggle');
+    hideEffectsBtn?.addEventListener('click', () => {
+      this.effectsVisible = false;
+      this.queryOptional('.service-card-effects')?.classList.remove('visible');
+      const footer = this.queryOptional('.service-card-footer');
+      if (footer !== null) {
+        const showBtn = document.createElement('button');
+        showBtn.className = 'service-card-expand-btn effects-show';
+        showBtn.setAttribute('aria-expanded', 'false');
+        showBtn.textContent = 'Show effects';
+        showBtn.addEventListener('click', () => {
+          this.effectsVisible = true;
+          this.queryOptional('.service-card-effects')?.classList.add('visible');
+          showBtn.remove();
+        });
+        footer.parentElement?.insertBefore(showBtn, footer);
+      }
+    });
   }
 }

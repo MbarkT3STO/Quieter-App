@@ -15,7 +15,7 @@ const CPU_HISTORY_LENGTH = 30;
 export class DashboardView extends Component {
   private cpuHistory: number[] = Array.from<number>({ length: CPU_HISTORY_LENGTH }).fill(0);
   private canvasCtx: CanvasRenderingContext2D | null = null;
-  private animFrame: number | null = null;
+  private drawScheduled = false; // prevent redundant rAF calls
 
   constructor() {
     super('div', 'dashboard-view');
@@ -140,7 +140,8 @@ export class DashboardView extends Component {
     this.addCleanup(pendingUnsub);
 
     this.addCleanup(() => {
-      if (this.animFrame !== null) cancelAnimationFrame(this.animFrame);
+      this.canvasCtx = null;
+      this.drawScheduled = false;
     });
   }
 
@@ -158,6 +159,17 @@ export class DashboardView extends Component {
   }
 
   private drawSparkline(): void {
+    // Debounce via rAF — only one draw per frame
+    if (this.drawScheduled) return;
+    this.drawScheduled = true;
+
+    requestAnimationFrame(() => {
+      this.drawScheduled = false;
+      this.renderSparklineFrame();
+    });
+  }
+
+  private renderSparklineFrame(): void {
     const ctx = this.canvasCtx;
     const canvas = this.queryOptional<HTMLCanvasElement>('#cpu-sparkline');
     if (ctx === null || canvas === null) return;
@@ -168,37 +180,27 @@ export class DashboardView extends Component {
 
     ctx.clearRect(0, 0, w, h);
 
-    if (this.cpuHistory.every((v) => v === 0)) {
-      return;
-    }
+    if (this.cpuHistory.every((v) => v === 0)) return;
 
     const stepX = (w - padding * 2) / (CPU_HISTORY_LENGTH - 1);
     const maxVal = 100;
 
-    // Draw gradient fill
     const gradient = ctx.createLinearGradient(0, 0, 0, h);
     gradient.addColorStop(0, 'rgba(108, 99, 255, 0.3)');
     gradient.addColorStop(1, 'rgba(108, 99, 255, 0)');
 
     ctx.beginPath();
     ctx.moveTo(padding, h - padding);
-
     this.cpuHistory.forEach((val, i) => {
       const x = padding + i * stepX;
       const y = h - padding - ((val / maxVal) * (h - padding * 2));
-      if (i === 0) {
-        ctx.lineTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+      ctx.lineTo(x, y);
     });
-
     ctx.lineTo(w - padding, h - padding);
     ctx.closePath();
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    // Draw line
     ctx.beginPath();
     this.cpuHistory.forEach((val, i) => {
       const x = padding + i * stepX;
@@ -206,7 +208,6 @@ export class DashboardView extends Component {
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     });
-
     ctx.strokeStyle = '#6C63FF';
     ctx.lineWidth = 1.5;
     ctx.lineJoin = 'round';
