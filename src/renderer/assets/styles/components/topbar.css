@@ -9,76 +9,34 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--color-border);
-  display: grid;
-  /* 3-column: brand | page title | actions */
-  grid-template-columns: var(--sidebar-current-width, var(--sidebar-width)) 1fr auto;
-  align-items: center;
-  z-index: var(--z-overlay);
-  /* Full bar is draggable for macOS window move */
-  -webkit-app-region: drag;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .topbar {
-    transition: grid-template-columns var(--transition-base);
-  }
-}
-
-/* ── Brand (left column — sits over the sidebar) ─────────────────────────── */
-.topbar-brand {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  height: 100%;
-  padding: 0 var(--space-3);
-  /* macOS traffic lights are ~72px wide; keep brand centered in sidebar */
-  padding-left: 80px;
-  -webkit-app-region: no-drag;
-  overflow: hidden;
+  padding: 0 var(--space-4);
+  z-index: var(--z-overlay);
+  -webkit-app-region: drag;
 }
 
-.topbar-brand-icon {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  flex-shrink: 0;
-  object-fit: contain;
-}
-
-.topbar-brand-name {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Hide brand name when sidebar is collapsed — only show icon */
-.topbar-brand-name {
-  opacity: 1;
-}
-
-/* ── Page title (center column) ──────────────────────────────────────────── */
+/* ── Page title — centered in the full topbar width ──────────────────────── */
 .topbar-page-title {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
-  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 0 var(--space-4);
+  text-align: center;
+  flex: 1;
   -webkit-app-region: drag;
 }
 
-/* ── Actions (right column) ──────────────────────────────────────────────── */
+/* ── Actions — pinned to the right ───────────────────────────────────────── */
 .topbar-actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0 var(--space-4);
+  position: absolute;
+  right: var(--space-4);
   -webkit-app-region: no-drag;
 }
 
@@ -91,7 +49,6 @@
   border-radius: var(--radius-md);
   color: var(--color-text-muted);
   cursor: pointer;
-  flex-shrink: 0;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -105,7 +62,7 @@
   color: var(--color-text-primary);
 }
 
-/* ── Pending changes badge ────────────────────────────────────────────────── */
+/* ── Pending badge ────────────────────────────────────────────────────────── */
 .topbar-pending-badge {
   display: inline-flex;
   align-items: center;

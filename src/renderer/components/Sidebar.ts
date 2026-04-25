@@ -87,16 +87,29 @@ export class Sidebar extends Component {
     this.element.setAttribute('role', 'navigation');
     this.element.setAttribute('aria-label', 'Main navigation');
 
-    // Restore persisted state
+    // Restore persisted state — don't touch the DOM here, wait for onMount
     this.collapsed = localStorage.getItem(STORAGE_KEY) === 'true';
-    // Apply immediately (before render) to avoid layout flash
-    this.applyCollapsedClass(false);
   }
 
   protected render(): void {
+    // Apply collapsed class directly on the sidebar element
+    this.element.classList.toggle('collapsed', this.collapsed);
+
     this.setHTML(`
-      <!-- Toggle button -->
+      <!-- Toggle button row: brand on left, collapse arrow on right -->
       <div class="sidebar-toggle">
+        <div class="sidebar-brand ${this.collapsed ? 'hidden' : ''}">
+          <img
+            src="./assets/icons/AppIcon32.png"
+            width="20"
+            height="20"
+            alt=""
+            aria-hidden="true"
+            class="sidebar-brand-icon"
+            draggable="false"
+          />
+          <span class="sidebar-brand-name">Quieter</span>
+        </div>
         <button
           class="sidebar-toggle-btn"
           id="sidebar-toggle-btn"
@@ -155,6 +168,12 @@ export class Sidebar extends Component {
   }
 
   protected onMount(): void {
+    // DOM is ready — apply the html class and CSS variable now
+    this.applyCollapsedClass(false);
+
+    // Notify other components of initial state
+    eventBus.emit('sidebar:toggled', this.collapsed);
+
     // Toggle button
     const toggleBtn = this.query<HTMLButtonElement>('#sidebar-toggle-btn');
     toggleBtn.addEventListener('click', () => {
@@ -200,6 +219,7 @@ export class Sidebar extends Component {
     localStorage.setItem(STORAGE_KEY, String(this.collapsed));
     this.applyCollapsedClass(true);
     this.updateToggleBtn();
+    eventBus.emit('sidebar:toggled', this.collapsed);
   }
 
   /**
@@ -208,7 +228,6 @@ export class Sidebar extends Component {
    */
   private applyCollapsedClass(animate: boolean): void {
     if (!animate) {
-      // Suppress transition on initial paint
       this.element.style.transition = 'none';
     }
 
@@ -218,8 +237,10 @@ export class Sidebar extends Component {
     const width = this.collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
     document.documentElement.style.setProperty('--sidebar-current-width', width);
 
+    // Drive topbar brand visibility via a class on <html>
+    document.documentElement.classList.toggle('sidebar-collapsed', this.collapsed);
+
     if (!animate) {
-      // Re-enable transitions after one frame
       requestAnimationFrame(() => {
         this.element.style.transition = '';
       });
@@ -228,10 +249,17 @@ export class Sidebar extends Component {
 
   private updateToggleBtn(): void {
     const btn = this.queryOptional<HTMLButtonElement>('#sidebar-toggle-btn');
-    if (btn === null) return;
-    const label = this.collapsed ? 'Expand sidebar' : 'Collapse sidebar';
-    btn.setAttribute('aria-label', label);
-    btn.setAttribute('title', label);
+    if (btn !== null) {
+      const label = this.collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('title', label);
+    }
+
+    // Show/hide brand name based on collapsed state
+    const brand = this.queryOptional<HTMLElement>('.sidebar-brand');
+    if (brand !== null) {
+      brand.classList.toggle('hidden', this.collapsed);
+    }
   }
 
   private updateActiveState(path: string): void {
