@@ -1,0 +1,111 @@
+/* ── Top Bar ──────────────────────────────────────────────────────────────── */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-height);
+  background: var(--topbar-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  padding-left: calc(var(--sidebar-current-width, var(--sidebar-width)) + var(--space-4));
+  z-index: var(--z-overlay);
+  -webkit-app-region: drag;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .topbar {
+    transition: padding-left var(--transition-base);
+  }
+}
+
+.topbar-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-right: var(--space-6);
+  -webkit-app-region: no-drag;
+}
+
+.topbar-search {
+  flex: 1;
+  max-width: 400px;
+  position: relative;
+  -webkit-app-region: no-drag;
+}
+
+.topbar-search-icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+  width: 16px;
+  height: 16px;
+}
+
+.topbar-search-input {
+  width: 100%;
+  height: 32px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 0 var(--space-3) 0 calc(var(--space-3) + 20px);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .topbar-search-input {
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+  }
+}
+
+.topbar-search-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.topbar-search-input:focus {
+  border-color: var(--color-border-focus);
+  background: var(--color-bg-overlay);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  -webkit-app-region: no-drag;
+}
+
+.topbar-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .topbar-action-btn {
+    transition: background var(--transition-fast), color var(--transition-fast);
+  }
+}
+
+.topbar-action-btn:hover {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+}
+
+.topbar-action-btn svg {
+  width: 18px;
+  height: 18px;
+}
