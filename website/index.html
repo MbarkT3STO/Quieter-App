@@ -1,0 +1,460 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Quieter — macOS system optimizer. Reclaim performance on aging Macs by selectively managing background services." />
+  <meta property="og:title" content="Quieter — macOS System Optimizer" />
+  <meta property="og:description" content="Reclaim performance on aging Macs by selectively managing background services." />
+  <meta property="og:image" content="icon512.png" />
+  <title>Quieter — macOS System Optimizer</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Nav ──────────────────────────────────────────────────────────────── -->
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="#">
+        <img src="icon.png" width="28" height="28" alt="Quieter icon" class="nav-brand-icon" />
+        <span class="nav-brand-name">Quieter</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#services">Services</a>
+        <a href="#safety">Safety</a>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme">
+          <!-- Moon icon (shown in dark mode) -->
+          <svg class="theme-icon theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
+          </svg>
+          <!-- Sun icon (shown in light mode) -->
+          <svg class="theme-icon theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
+          </svg>
+        </button>
+        <a href="https://github.com/MbarkT3STO/Quieter-App" target="_blank" rel="noopener" class="nav-github">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" aria-hidden="true">
+            <path fill-rule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clip-rule="evenodd"/>
+          </svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-glow hero-glow-1" aria-hidden="true"></div>
+    <div class="hero-glow hero-glow-2" aria-hidden="true"></div>
+    <div class="hero-glow hero-glow-3" aria-hidden="true"></div>
+
+    <div class="container">
+      <div class="hero-badge">
+        <span class="hero-badge-dot" aria-hidden="true"></span>
+        Free &amp; Open Source · macOS 12+
+      </div>
+
+      <h1 class="hero-title">
+        Make your Mac<br />
+        <span class="hero-title-accent">breathe again</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        Quieter helps you reclaim CPU and RAM on aging Macs by selectively
+        managing background services — safely, transparently, and reversibly.
+      </p>
+
+      <div class="hero-actions">
+        <a href="https://github.com/MbarkT3STO/Quieter-App/releases" class="btn-hero-primary" target="_blank" rel="noopener">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
+            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          </svg>
+          Download for macOS
+        </a>
+        <a href="https://github.com/MbarkT3STO/Quieter-App" class="btn-hero-ghost" target="_blank" rel="noopener">
+          View on GitHub
+        </a>
+      </div>
+
+      <div class="hero-meta">
+        <span>
+          <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          Open Source · MIT License
+        </span>
+        <span>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          60 curated services
+        </span>
+        <span>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13" aria-hidden="true"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          Always reversible
+        </span>
+      </div>
+    </div>
+
+    <!-- App window mockup -->
+    <div class="hero-mockup-wrap">
+      <div class="container">
+        <div class="hero-mockup" aria-hidden="true">
+          <div class="mockup-titlebar">
+            <span class="mockup-dot mockup-dot-red"></span>
+            <span class="mockup-dot mockup-dot-yellow"></span>
+            <span class="mockup-dot mockup-dot-green"></span>
+            <span class="mockup-title">Dashboard</span>
+          </div>
+          <div class="mockup-body">
+            <div class="mockup-sidebar">
+              <div class="mockup-brand">
+                <img src="icon.png" width="16" height="16" alt="" />
+                <span>Quieter</span>
+              </div>
+              <div class="mockup-nav-item mockup-nav-active">
+                <span class="mockup-nav-dot"></span> Dashboard
+              </div>
+              <div class="mockup-nav-item">All Services</div>
+              <div class="mockup-nav-divider"></div>
+              <div class="mockup-nav-item">Performance</div>
+              <div class="mockup-nav-item">Network</div>
+              <div class="mockup-nav-item">Privacy</div>
+              <div class="mockup-nav-item">Sync</div>
+            </div>
+            <div class="mockup-content">
+              <div class="mockup-stats">
+                <div class="mockup-stat mockup-stat-purple">
+                  <div class="mockup-stat-label">CPU</div>
+                  <div class="mockup-stat-value">58%</div>
+                </div>
+                <div class="mockup-stat mockup-stat-green">
+                  <div class="mockup-stat-label">RAM</div>
+                  <div class="mockup-stat-value">12.8G</div>
+                </div>
+                <div class="mockup-stat mockup-stat-amber">
+                  <div class="mockup-stat-label">Active</div>
+                  <div class="mockup-stat-value">23</div>
+                </div>
+                <div class="mockup-stat mockup-stat-muted">
+                  <div class="mockup-stat-label">Disabled</div>
+                  <div class="mockup-stat-value">45</div>
+                </div>
+              </div>
+              <div class="mockup-chart">
+                <div class="mockup-chart-label">CPU Usage (last 90s)</div>
+                <svg viewBox="0 0 400 60" preserveAspectRatio="none" class="mockup-sparkline">
+                  <defs>
+                    <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#6C63FF" stop-opacity="0.35"/>
+                      <stop offset="100%" stop-color="#6C63FF" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M0,55 L40,50 L80,45 L120,30 L160,28 L200,28 L240,28 L280,28 L320,28 L360,28 L400,28 L400,60 L0,60 Z" fill="url(#sg)"/>
+                  <path d="M0,55 L40,50 L80,45 L120,30 L160,28 L200,28 L240,28 L280,28 L320,28 L360,28 L400,28" fill="none" stroke="#6C63FF" stroke-width="1.5"/>
+                </svg>
+              </div>
+              <div class="mockup-cards">
+                <div class="mockup-card">
+                  <div class="mockup-card-header">
+                    <div class="mockup-card-icon mockup-icon-purple"></div>
+                    <span>Spotlight Indexing</span>
+                    <span class="mockup-badge mockup-badge-amber">Moderate</span>
+                  </div>
+                  <div class="mockup-card-bars">
+                    <div class="mockup-bar"><span>CPU</span><div class="mockup-bar-track"><div class="mockup-bar-fill" style="width:100%;background:#F87171"></div></div></div>
+                    <div class="mockup-bar"><span>RAM</span><div class="mockup-bar-track"><div class="mockup-bar-fill" style="width:66%;background:#FBBF24"></div></div></div>
+                  </div>
+                  <div class="mockup-card-footer">
+                    <span class="mockup-state"><span class="mockup-dot-green"></span> Active</span>
+                    <div class="mockup-toggle mockup-toggle-on"></div>
+                  </div>
+                </div>
+                <div class="mockup-card">
+                  <div class="mockup-card-header">
+                    <div class="mockup-card-icon mockup-icon-green"></div>
+                    <span>Crash Reporter</span>
+                    <span class="mockup-badge mockup-badge-green">Safe</span>
+                  </div>
+                  <div class="mockup-card-bars">
+                    <div class="mockup-bar"><span>CPU</span><div class="mockup-bar-track"><div class="mockup-bar-fill" style="width:33%;background:#34D399"></div></div></div>
+                    <div class="mockup-bar"><span>RAM</span><div class="mockup-bar-track"><div class="mockup-bar-fill" style="width:33%;background:#34D399"></div></div></div>
+                  </div>
+                  <div class="mockup-card-footer">
+                    <span class="mockup-state"><span class="mockup-dot-muted"></span> Disabled</span>
+                    <div class="mockup-toggle mockup-toggle-off"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Stats bar ─────────────────────────────────────────────────────────── -->
+  <section class="stats-bar">
+    <div class="container">
+      <div class="stats-bar-inner">
+        <div class="stat-item">
+          <span class="stat-number">60</span>
+          <span class="stat-label">Curated Services</span>
+        </div>
+        <div class="stat-divider" aria-hidden="true"></div>
+        <div class="stat-item">
+          <span class="stat-number">6</span>
+          <span class="stat-label">Categories</span>
+        </div>
+        <div class="stat-divider" aria-hidden="true"></div>
+        <div class="stat-item">
+          <span class="stat-number">macOS 12+</span>
+          <span class="stat-label">Supported</span>
+        </div>
+        <div class="stat-divider" aria-hidden="true"></div>
+        <div class="stat-item">
+          <span class="stat-number">MIT</span>
+          <span class="stat-label">License</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Features ─────────────────────────────────────────────────────────── -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Features</div>
+        <h2 class="section-title">Everything you need,<br />nothing you don't</h2>
+        <p class="section-subtitle">Quieter is focused, transparent, and safe by design.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card feature-card-large">
+          <div class="feature-icon feature-icon-purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Instant performance gains</h3>
+          <p class="feature-desc">Disable CPU-hungry daemons like <code>mediaanalysisd</code>, <code>chronod</code>, and <code>duetexpertd</code> that are known to spike to 100–400% CPU on macOS Sonoma and Sequoia.</p>
+          <div class="feature-tags">
+            <span>mediaanalysisd</span>
+            <span>chronod</span>
+            <span>duetexpertd</span>
+            <span>triald</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon feature-icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Always reversible</h3>
+          <p class="feature-desc">A full snapshot is written before every apply. One click in Settings restores everything to its original state.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon feature-icon-amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Risk-aware warnings</h3>
+          <p class="feature-desc">Every service is rated Safe, Moderate, or Advanced. Advanced services require explicit confirmation before applying.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon feature-icon-blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Live system stats</h3>
+          <p class="feature-desc">Real-time CPU and RAM monitoring with a 90-second sparkline chart. See the impact of your changes immediately.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon feature-icon-purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Instant search</h3>
+          <p class="feature-desc">Filter across all 60 services by name, description, or category in real time. Find what you need in milliseconds.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Services ─────────────────────────────────────────────────────────── -->
+  <section class="section section-alt" id="services">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Service Registry</div>
+        <h2 class="section-title">60 real macOS services,<br />carefully curated</h2>
+        <p class="section-subtitle">Every entry is verified against real launchd plists and defaults domains. No guesswork.</p>
+      </div>
+
+      <div class="categories-grid">
+        <div class="category-card">
+          <div class="category-icon" style="background:rgba(108,99,255,0.12);color:#6C63FF">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
+          </div>
+          <div class="category-info">
+            <div class="category-name">Performance</div>
+            <div class="category-count">13 services</div>
+          </div>
+          <div class="category-examples">Spotlight · Siri · Apple Intelligence · mediaanalysisd · chronod</div>
+        </div>
+
+        <div class="category-card">
+          <div class="category-icon" style="background:rgba(52,211,153,0.12);color:#34D399">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20"><path fill-rule="evenodd" d="M17.778 8.222c-4.296-4.296-11.26-4.296-15.556 0A1 1 0 01.808 6.808c5.076-5.077 13.308-5.077 18.384 0a1 1 0 01-1.414 1.414zM14.95 11.05a7 7 0 00-9.9 0 1 1 0 01-1.414-1.414 9 9 0 0112.728 0 1 1 0 01-1.414 1.414zM12.12 13.88a3 3 0 00-4.242 0 1 1 0 01-1.415-1.415 5 5 0 017.072 0 1 1 0 01-1.415 1.415zM9 16a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+          </div>
+          <div class="category-info">
+            <div class="category-name">Network</div>
+            <div class="category-count">10 services</div>
+          </div>
+          <div class="category-examples">AirDrop · Handoff · Bonjour · searchpartyd · WeatherKit</div>
+        </div>
+
+        <div class="category-card">
+          <div class="category-icon" style="background:rgba(251,191,36,0.12);color:#FBBF24">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
+          </div>
+          <div class="category-info">
+            <div class="category-name">Visuals</div>
+            <div class="category-count">8 services</div>
+          </div>
+          <div class="category-examples">Transparency · Reduce Motion · Live Text · Visual Look Up</div>
+        </div>
+
+        <div class="category-card">
+          <div class="category-icon" style="background:rgba(248,113,113,0.12);color:#F87171">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          </div>
+          <div class="category-info">
+            <div class="category-name">Privacy</div>
+            <div class="category-count">10 services</div>
+          </div>
+          <div class="category-examples">Crash Reporter · Analytics · Biome Sync · Context Store</div>
+        </div>
+
+        <div class="category-card">
+          <div class="category-icon" style="background:rgba(99,179,237,0.12);color:#63B3ED">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+          </div>
+          <div class="category-info">
+            <div class="category-name">Sync</div>
+            <div class="category-count">7 services</div>
+          </div>
+          <div class="category-examples">iCloud Drive · Photos · Keychain · accountsd · contactsd</div>
+        </div>
+
+        <div class="category-card">
+          <div class="category-icon" style="background:rgba(160,174,192,0.12);color:#A0AEC0">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z"/></svg>
+          </div>
+          <div class="category-info">
+            <div class="category-name">Misc</div>
+            <div class="category-count">12 services</div>
+          </div>
+          <div class="category-examples">Time Machine · Software Update · Power Nap · Gatekeeper</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Safety ────────────────────────────────────────────────────────────── -->
+  <section class="section" id="safety">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Safety Model</div>
+        <h2 class="section-title">Nothing changes<br />until you say so</h2>
+        <p class="section-subtitle">Quieter is built around a strict safety-first philosophy.</p>
+      </div>
+
+      <div class="safety-steps">
+        <div class="safety-step">
+          <div class="safety-step-num">01</div>
+          <div class="safety-step-body">
+            <h3>Toggle = pending only</h3>
+            <p>Flipping a toggle marks a service as pending. Nothing touches the system until you explicitly click Apply Changes.</p>
+          </div>
+        </div>
+        <div class="safety-step">
+          <div class="safety-step-num">02</div>
+          <div class="safety-step-body">
+            <h3>Snapshot before apply</h3>
+            <p>A full state backup is written to <code>~/.quieter/backup.json</code> before any change is made. You can always restore it.</p>
+          </div>
+        </div>
+        <div class="safety-step">
+          <div class="safety-step-num">03</div>
+          <div class="safety-step-body">
+            <h3>Rollback on failure</h3>
+            <p>If any command fails mid-apply, all already-applied changes are automatically reversed. You never end up in a partial state.</p>
+          </div>
+        </div>
+        <div class="safety-step">
+          <div class="safety-step-num">04</div>
+          <div class="safety-step-body">
+            <h3>Risk confirmation</h3>
+            <p>Services marked Advanced require an explicit confirmation dialog listing exactly what you're about to change.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA ───────────────────────────────────────────────────────────────── -->
+  <section class="section cta-section">
+    <div class="cta-glow" aria-hidden="true"></div>
+    <div class="container">
+      <div class="cta-card">
+        <img src="icon.png" width="64" height="64" alt="Quieter icon" class="cta-icon" />
+        <h2 class="cta-title">Ready to quiet your Mac?</h2>
+        <p class="cta-subtitle">Free, open source, and takes 30 seconds to set up.</p>
+        <div class="cta-actions">
+          <a href="https://github.com/MbarkT3STO/Quieter-App/releases" class="btn-hero-primary" target="_blank" rel="noopener">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" aria-hidden="true">
+              <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+            Download for macOS
+          </a>
+          <a href="https://github.com/MbarkT3STO/Quieter-App" class="btn-hero-ghost" target="_blank" rel="noopener">
+            View Source
+          </a>
+        </div>
+        <p class="cta-note">macOS 12 Monterey or later · Apple Silicon &amp; Intel</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ────────────────────────────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <img src="icon.png" width="22" height="22" alt="" />
+          <span>Quieter</span>
+        </div>
+        <div class="footer-links">
+          <a href="https://github.com/MbarkT3STO/Quieter-App" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/MbarkT3STO/Quieter-App#readme" target="_blank" rel="noopener">Docs</a>
+          <a href="https://github.com/MbarkT3STO/Quieter-App/issues" target="_blank" rel="noopener">Issues</a>
+          <a href="https://github.com/MbarkT3STO/Quieter-App/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+        </div>
+        <p class="footer-copy">Built with Electron + TypeScript · Open Source</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

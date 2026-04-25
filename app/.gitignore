@@ -1,11 +1,12 @@
 # ── Dependencies ──────────────────────────────────────────────────────────────
 node_modules/
-app/node_modules/
 
-# ── Build output ──────────────────────────────────────────────────────────────
-app/out/
-app/dist/
-app/release/
+# ── Build output (electron-vite) ──────────────────────────────────────────────
+out/
+
+# ── Packaged app output (electron-builder) ────────────────────────────────────
+release/
+dist/
 *.dmg
 *.pkg
 *.app
@@ -16,14 +17,17 @@ app/release/
 # ── Logs ──────────────────────────────────────────────────────────────────────
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# ── App runtime data ──────────────────────────────────────────────────────────
+# ── App runtime data (written to home dir, not the repo) ──────────────────────
 .quieter/
 
 # ── macOS ─────────────────────────────────────────────────────────────────────
 .DS_Store
 .AppleDouble
 .LSOverride
+Icon?
 ._*
 .Spotlight-V100
 .Trashes
@@ -41,3 +45,7 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+*.pem
+.cache/

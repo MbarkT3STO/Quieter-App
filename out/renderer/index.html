@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' ws://localhost:5173 http://localhost:5173;" />
+    <title>Quieter</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/AppIcon32-DQg7QBjK.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/AppIcon16-CjtqozpM.png" />
+
+    <!-- Design tokens and reset must load first -->
+
+    <!-- Component styles -->
+    <script type="module" crossorigin src="./assets/index-0TFh_ivV.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CqfR3XQy.css">
+  </head>
+  <body>
+    <div id="app" role="application" aria-label="PeakMac">
+      <!-- Loading state shown before JS initializes -->
+      <div id="app-loading" style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        flex-direction: column;
+        gap: 16px;
+        color: #9B9AAB;
+        font-family: -apple-system, sans-serif;
+        font-size: 14px;
+        background: #0D0D0F;
+      ">
+        <div style="
+          width: 20px;
+          height: 20px;
+          border: 2px solid rgba(255,255,255,0.1);
+          border-top-color: #6C63FF;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
+        "></div>
+        <span>Loading Quieter…</span>
+        <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+      </div>
+    </div>
+
+  </body>
+</html>
