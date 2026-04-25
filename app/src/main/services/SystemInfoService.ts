@@ -12,22 +12,34 @@
 import { safeExecOutput } from '../utils/shell.js';
 import { logger } from '../utils/logger.js';
 import type { Result, SystemStats } from '../../shared/types.js';
+import { CpuMethod } from '../../shared/types.js';
 import { STATS_POLL_INTERVAL_MS } from '../../shared/constants.js';
 
-const SYSCTL = '/usr/sbin/sysctl';
+const SYSCTL  = '/usr/sbin/sysctl';
 const VM_STAT = '/usr/bin/vm_stat';
+const TOP     = '/usr/bin/top';
 const CONTEXT = 'SystemInfoService';
+
+/**
+ * CPU poll interval — 3 s matches the RAM poll and keeps child-process
+ * overhead low while still giving a real per-second snapshot via top -l 1.
+ */
+const CPU_POLL_INTERVAL_MS = 3000;
 
 export class SystemInfoService {
   private static instance: SystemInfoService;
   private latestStats: SystemStats | null = null;
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private cpuTimer: ReturnType<typeof setInterval> | null = null;
+  private ramTimer: ReturnType<typeof setInterval> | null = null;
   private activeCount = 0;
   private disabledCount = 0;
 
   // Cached values that never change at runtime
   private cachedCpuCount: number | null = null;
   private cachedTotalRamBytes: number | null = null;
+
+  // Which CPU measurement method to use (configurable by the user)
+  private cpuMethod: CpuMethod = CpuMethod.LoadAvg;
 
   // Pre-compiled regex patterns for vm_stat parsing
   private static readonly VM_STAT_PATTERNS = {
@@ -51,31 +63,43 @@ export class SystemInfoService {
     this.disabledCount = disabled;
   }
 
+  /** Update the CPU measurement method at runtime (called when settings change). */
+  public setCpuMethod(method: CpuMethod): void {
+    if (this.cpuMethod !== method) {
+      this.cpuMethod = method;
+      logger.info(CONTEXT, `CPU method changed to: ${method}`);
+    }
+  }
+
   /**
-   * Start polling. Fetches immediately, then every STATS_POLL_INTERVAL_MS.
-   * Pre-warms the cached CPU count and total RAM on first call.
+   * Start polling.
+   * - CPU: every 1.5 s using `top -l 2 -n 0 -s 1` (real 1-second sample)
+   * - RAM: every 3 s using vm_stat (RAM changes slowly)
    */
   public startPolling(): void {
-    if (this.pollTimer !== null) return;
+    if (this.cpuTimer !== null) return;
 
-    // Pre-warm caches before first poll
     void this.warmCaches().then(() => {
       void this.fetchStats();
     });
 
-    this.pollTimer = setInterval(() => {
-      void this.fetchStats();
+    // CPU refreshes every 1.5 s
+    this.cpuTimer = setInterval(() => {
+      void this.fetchCpuAndPush();
+    }, CPU_POLL_INTERVAL_MS);
+
+    // RAM refreshes every 3 s
+    this.ramTimer = setInterval(() => {
+      void this.fetchRamAndPush();
     }, STATS_POLL_INTERVAL_MS);
 
-    logger.info(CONTEXT, `Started polling every ${STATS_POLL_INTERVAL_MS}ms`);
+    logger.info(CONTEXT, `Started polling — CPU every ${CPU_POLL_INTERVAL_MS}ms, RAM every ${STATS_POLL_INTERVAL_MS}ms`);
   }
 
   public stopPolling(): void {
-    if (this.pollTimer !== null) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
-      logger.info(CONTEXT, 'Stopped polling');
-    }
+    if (this.cpuTimer !== null) { clearInterval(this.cpuTimer); this.cpuTimer = null; }
+    if (this.ramTimer !== null) { clearInterval(this.ramTimer); this.ramTimer = null; }
+    logger.info(CONTEXT, 'Stopped polling');
   }
 
   public async getStats(): Promise<Result<SystemStats>> {
@@ -132,15 +156,49 @@ export class SystemInfoService {
     return { success: true, data: stats };
   }
 
-  private async getCpuUsage(): Promise<Result<number>> {
-    // Only fetch CPU count if not cached
-    const loadResult = await safeExecOutput(SYSCTL, ['-n', 'vm.loadavg'], CONTEXT);
+  /** Fetch only CPU and merge into latestStats */
+  private async fetchCpuAndPush(): Promise<void> {
+    const result = await this.getCpuUsage();
+    if (!result.success || this.latestStats === null) return;
+    this.latestStats = {
+      ...this.latestStats,
+      cpuUsagePercent: result.data,
+      timestamp: new Date().toISOString(),
+    };
+  }
 
+  /** Fetch only RAM and merge into latestStats */
+  private async fetchRamAndPush(): Promise<void> {
+    const result = await this.getRamUsage();
+    if (!result.success || this.latestStats === null) return;
+    this.latestStats = {
+      ...this.latestStats,
+      ramUsedGB:      result.data.usedGB,
+      ramTotalGB:     result.data.totalGB,
+      ramUsedPercent: result.data.usedPercent,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Get CPU usage using the method chosen by the user in Settings.
+   * - LoadAvg: vm.loadavg (1-min rolling average, lightweight)
+   * - TopSnapshot: top -l 1 (real per-second snapshot, slightly more overhead)
+   */
+  private async getCpuUsage(): Promise<Result<number>> {
+    if (this.cpuMethod === CpuMethod.TopSnapshot) {
+      return this.getCpuViaTop();
+    }
+    return this.getCpuViaLoadAvg();
+  }
+
+  /** vm.loadavg — 1-minute rolling average, very lightweight */
+  private async getCpuViaLoadAvg(): Promise<Result<number>> {
+    const loadResult = await safeExecOutput(SYSCTL, ['-n', 'vm.loadavg'], CONTEXT);
     if (!loadResult.success) {
       return { success: false, error: 'Failed to read load average', code: 'CPU_READ_FAILED' };
     }
 
-    // Fetch CPU count if not cached yet
     if (this.cachedCpuCount === null) {
       const countResult = await safeExecOutput(SYSCTL, ['-n', 'hw.logicalcpu'], CONTEXT);
       if (countResult.success) {
@@ -150,9 +208,8 @@ export class SystemInfoService {
     }
 
     const cpuCount = this.cachedCpuCount ?? 1;
-
     const loadMatch = loadResult.data.match(/\{\s*([\d.]+)/);
-    if (loadMatch === null || loadMatch[1] === undefined) {
+    if (loadMatch?.[1] === undefined) {
       return { success: false, error: 'Failed to parse load average', code: 'CPU_PARSE_FAILED' };
     }
 
@@ -162,6 +219,28 @@ export class SystemInfoService {
     }
 
     return { success: true, data: Math.min(100, Math.round((loadAvg / cpuCount) * 100)) };
+  }
+
+  /** top -l 1 — real per-second snapshot, parses idle% */
+  private async getCpuViaTop(): Promise<Result<number>> {
+    const result = await safeExecOutput(TOP, ['-l', '1', '-n', '0'], CONTEXT);
+
+    if (result.success) {
+      const cpuLine = result.data.split('\n').find((l) => l.startsWith('CPU usage:'));
+      if (cpuLine !== undefined) {
+        const idleMatch = cpuLine.match(/([\d.]+)%\s+idle/);
+        if (idleMatch?.[1] !== undefined) {
+          const idle = parseFloat(idleMatch[1]);
+          if (!isNaN(idle)) {
+            return { success: true, data: Math.min(100, Math.round(100 - idle)) };
+          }
+        }
+      }
+    }
+
+    // Fallback to loadavg if top fails
+    logger.debug(CONTEXT, 'top failed, falling back to vm.loadavg');
+    return this.getCpuViaLoadAvg();
   }
 
   private async getRamUsage(): Promise<Result<{ usedGB: number; totalGB: number; usedPercent: number }>> {

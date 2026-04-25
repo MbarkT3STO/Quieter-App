@@ -9,7 +9,7 @@ import { eventBus } from '../core/EventBus.js';
 import { showToast } from '../components/Toast.js';
 import { themeManager } from '../core/ThemeManager.js';
 import type { AppSettings } from '../../shared/types.js';
-import { ChangeAction } from '../../shared/types.js';
+import { ChangeAction, CpuMethod } from '../../shared/types.js';
 import { APP_NAME, APP_VERSION, GITHUB_URL } from '../../shared/constants.js';
 
 type ThemeSetting = AppSettings['theme'];
@@ -127,6 +127,30 @@ export class SettingsView extends Component {
             <div class="settings-row-desc">Read actual system service states when the app launches</div>
           </div>
           <div id="toggle-autocheck"></div>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">CPU Measurement Method</div>
+            <div class="settings-row-desc">
+              <strong>Load Average</strong> — lightweight 1-min rolling average (default, recommended).<br/>
+              <strong>Top Snapshot</strong> — real per-second reading via <code>top -l 1</code>, more accurate but spawns a process every 3 s.
+            </div>
+          </div>
+          <div class="cpu-method-switcher" role="radiogroup" aria-label="CPU measurement method">
+            <button
+              class="cpu-method-btn${settings.cpuMethod === CpuMethod.LoadAvg || settings.cpuMethod === undefined ? ' active' : ''}"
+              data-method="${CpuMethod.LoadAvg}"
+              role="radio"
+              aria-checked="${settings.cpuMethod === CpuMethod.LoadAvg || settings.cpuMethod === undefined}"
+            >Load Avg</button>
+            <button
+              class="cpu-method-btn${settings.cpuMethod === CpuMethod.TopSnapshot ? ' active' : ''}"
+              data-method="${CpuMethod.TopSnapshot}"
+              role="radio"
+              aria-checked="${settings.cpuMethod === CpuMethod.TopSnapshot}"
+            >Top Snapshot</button>
+          </div>
         </div>
       </div>
 
@@ -249,6 +273,22 @@ export class SettingsView extends Component {
   }
 
   private bindActions(): void {
+    // CPU method switcher
+    const cpuSwitcher = this.queryOptional<HTMLElement>('.cpu-method-switcher');
+    cpuSwitcher?.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-method]');
+      if (btn === null) return;
+      const method = btn.dataset['method'] as CpuMethod | undefined;
+      if (method === undefined) return;
+      void this.saveSetting('cpuMethod', method);
+      // Update active state immediately
+      cpuSwitcher.querySelectorAll<HTMLButtonElement>('.cpu-method-btn').forEach((b) => {
+        const isActive = b.dataset['method'] === method;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-checked', String(isActive));
+      });
+    });
+
     // Theme switcher
     const themeSwitcher = this.queryOptional<HTMLElement>('.theme-switcher');
     themeSwitcher?.addEventListener('click', (e) => {

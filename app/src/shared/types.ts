@@ -44,6 +44,14 @@ export enum ChangeAction {
   Disable = 'disable',
 }
 
+/** How CPU usage is measured in the dashboard */
+export enum CpuMethod {
+  /** 1-minute rolling average via vm.loadavg — lightweight, less reactive */
+  LoadAvg = 'loadavg',
+  /** Real per-second snapshot via top -l 1 — accurate, slightly more overhead */
+  TopSnapshot = 'top',
+}
+
 // ─── Service Data Model ───────────────────────────────────────────────────────
 
 export interface DefaultsCommand {
@@ -185,6 +193,8 @@ export interface AppSettings {
   launchAtLogin: boolean;
   autoCheckOnStartup: boolean;
   theme: 'dark' | 'light' | 'system';
+  /** CPU measurement method shown in the dashboard */
+  cpuMethod: CpuMethod;
 }
 
 // ─── Report ───────────────────────────────────────────────────────────────────

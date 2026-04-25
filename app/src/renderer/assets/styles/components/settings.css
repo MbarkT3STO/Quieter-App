@@ -356,3 +356,41 @@
   background: var(--color-accent);
   border-radius: 50%;
 }
+
+/* ── CPU Method Switcher ──────────────────────────────────────────────────── */
+.cpu-method-switcher {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.cpu-method-btn {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cpu-method-btn {
+    transition: background var(--transition-fast), color var(--transition-fast),
+      border-color var(--transition-fast);
+  }
+}
+
+.cpu-method-btn:hover {
+  background: var(--color-bg-overlay);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
+}
+
+.cpu-method-btn.active {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  border-color: var(--color-border-accent);
+}

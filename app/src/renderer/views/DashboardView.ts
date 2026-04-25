@@ -87,7 +87,7 @@ export class DashboardView extends Component {
 
       <div class="sparkline-card" role="region" aria-label="CPU usage history">
         <div class="sparkline-header">
-          <span class="sparkline-title">CPU Usage (last 90s)</span>
+          <span class="sparkline-title">CPU Usage (last 45s)</span>
           <span class="sparkline-value" id="sparkline-value">${stats !== null ? `${stats.cpuUsagePercent}%` : '—'}</span>
         </div>
         <canvas id="cpu-sparkline" aria-label="CPU usage sparkline chart" role="img"></canvas>

@@ -12,6 +12,7 @@ import { ServiceManager } from '../services/ServiceManager.js';
 import { SystemInfoService } from '../services/SystemInfoService.js';
 import { logger } from '../utils/logger.js';
 import type { Result, ServiceChange, AppSettings, SystemReport } from '../../shared/types.js';
+import { CpuMethod } from '../../shared/types.js';
 import {
   DATA_DIR_NAME,
   SETTINGS_FILENAME,
@@ -33,6 +34,10 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   const dataDir = path.join(os.homedir(), DATA_DIR_NAME);
   const settingsPath = path.join(dataDir, SETTINGS_FILENAME);
   const firstLaunchPath = path.join(dataDir, FIRST_LAUNCH_FILENAME);
+
+  // Apply saved CPU method immediately on startup
+  const savedSettings = loadSettings(settingsPath);
+  sysInfo.setCpuMethod(savedSettings.cpuMethod ?? CpuMethod.LoadAvg);
 
   // ─── getServices ────────────────────────────────────────────────────────────
   ipcMain.handle(IPC_CHANNELS.GET_SERVICES, async (): Promise<Result<unknown>> => {
@@ -174,6 +179,9 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
 
         // Handle launch at login
         app.setLoginItemSettings({ openAtLogin: settings.launchAtLogin });
+
+        // Apply CPU method change immediately — no restart needed
+        sysInfo.setCpuMethod(settings.cpuMethod ?? CpuMethod.LoadAvg);
 
         logger.info(CONTEXT, 'Settings saved', { settings });
         return { success: true, data: undefined };

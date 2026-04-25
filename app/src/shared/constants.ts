@@ -41,11 +41,14 @@ export const VIRTUAL_SCROLL_ITEM_HEIGHT = 160;
 /** Threshold for enabling virtual scroll */
 export const VIRTUAL_SCROLL_THRESHOLD = 50;
 
+import { CpuMethod } from './types.js';
+
 /** Default app settings */
 export const DEFAULT_SETTINGS = {
   launchAtLogin: false,
   autoCheckOnStartup: true,
   theme: 'dark' as const,
+  cpuMethod: CpuMethod.LoadAvg,
 };
 
 /** GitHub repository URL */
