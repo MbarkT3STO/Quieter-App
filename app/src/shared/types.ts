@@ -179,6 +179,10 @@ export interface PeakMacAPI {
   getSettings(): Promise<Result<AppSettings>>;
   /** Save app settings */
   saveSettings(settings: AppSettings): Promise<Result<void>>;
+  /** Enable or disable Persistent Enforcer (launch at login with --hidden) */
+  setEnforcerMode(enabled: boolean): Promise<Result<void>>;
+  /** Check whether Persistent Enforcer is currently active */
+  getEnforcerMode(): Promise<Result<boolean>>;
 }
 
 // ─── Composite Types ──────────────────────────────────────────────────────────

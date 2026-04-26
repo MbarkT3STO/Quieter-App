@@ -195,6 +195,45 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     },
   );
 
+  // ─── setEnforcerMode ─────────────────────────────────────────────────────────
+  ipcMain.handle(
+    IPC_CHANNELS.SET_ENFORCER_MODE,
+    (_event, enabled: boolean): Result<unknown> => {
+      try {
+        if (enabled) {
+          // Launch at login with --hidden so the app runs silently to re-disable services
+          app.setLoginItemSettings({ openAtLogin: true, args: ['--hidden'] });
+          logger.info(CONTEXT, 'Persistent Enforcer enabled (launch at login with --hidden)');
+        } else {
+          // Remove the login item entirely (or keep it without --hidden if launchAtLogin is on)
+          const settings = loadSettings(settingsPath);
+          if (settings.launchAtLogin) {
+            // Keep launch at login but without the --hidden flag
+            app.setLoginItemSettings({ openAtLogin: true, args: [] });
+          } else {
+            app.setLoginItemSettings({ openAtLogin: false });
+          }
+          logger.info(CONTEXT, 'Persistent Enforcer disabled');
+        }
+        return { success: true, data: undefined };
+      } catch (err) {
+        logger.error(CONTEXT, 'setEnforcerMode failed', { err });
+        return { success: false, error: 'Failed to set enforcer mode', code: 'ENFORCER_SET_FAILED' };
+      }
+    },
+  );
+
+  // ─── getEnforcerMode ─────────────────────────────────────────────────────────
+  ipcMain.handle(IPC_CHANNELS.GET_ENFORCER_MODE, (): Result<unknown> => {
+    try {
+      const loginSettings = app.getLoginItemSettings({ args: ['--hidden'] });
+      return { success: true, data: loginSettings.openAtLogin };
+    } catch (err) {
+      logger.error(CONTEXT, 'getEnforcerMode failed', { err });
+      return { success: false, error: 'Failed to get enforcer mode', code: 'ENFORCER_GET_FAILED' };
+    }
+  });
+
   logger.info(CONTEXT, 'All IPC handlers registered');
 }
 

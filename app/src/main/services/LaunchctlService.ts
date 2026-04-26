@@ -4,6 +4,7 @@
  * Falls back to 'launchctl unload' / 'launchctl load' for compatibility.
  */
 
+import fs from 'fs';
 import os from 'os';
 import { safeExec, safeExecOutput } from '../utils/shell.js';
 import { logger } from '../utils/logger.js';
@@ -194,10 +195,10 @@ export class LaunchctlService {
 
     const paths = requiresAdmin ? [...systemPaths, ...userPaths] : [...userPaths, ...systemPaths];
 
-    // Return the first path that exists (we check existence via the path pattern)
-    // In production, we'd use fs.existsSync — but we return the most likely path
     for (const p of paths) {
-      return p; // Return first candidate; launchctl will error if wrong
+      if (fs.existsSync(p)) {
+        return p;
+      }
     }
     return null;
   }

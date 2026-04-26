@@ -9,6 +9,7 @@ import fs from 'fs';
 import os from 'os';
 import { registerIpcHandlers } from './ipc/handlers.js';
 import { SystemInfoService } from './services/SystemInfoService.js';
+import { ServiceManager } from './services/ServiceManager.js';
 import { logger } from './utils/logger.js';
 import { APP_NAME } from '../shared/constants.js';
 
@@ -100,6 +101,24 @@ app.whenReady().then(() => {
     electronVersion: process.versions['electron'],
     nodeVersion: process.versions['node'],
   });
+
+  // ── Enforcer mode: re-disable services silently and quit ──────────────────
+  if (process.argv.includes('--hidden')) {
+    logger.info(CONTEXT, 'Running in enforcer mode (--hidden), no window will be created');
+    void ServiceManager.getInstance()
+      .enforceDisabledStates()
+      .then(() => {
+        logger.info(CONTEXT, 'Enforcer mode complete, quitting');
+        logger.close();
+        app.quit();
+      })
+      .catch((err: unknown) => {
+        logger.error(CONTEXT, 'Enforcer mode encountered an error', { err });
+        logger.close();
+        app.quit();
+      });
+    return;
+  }
 
   // ── Remove the default Electron menu entirely ─────────────────────────────
   Menu.setApplicationMenu(null);

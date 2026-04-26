@@ -54,6 +54,14 @@ const api: PeakMacAPI = {
     return ipcRenderer.invoke(IPC_CHANNELS.SAVE_SETTINGS, settings);
   },
 
+  setEnforcerMode(enabled: boolean) {
+    return ipcRenderer.invoke(IPC_CHANNELS.SET_ENFORCER_MODE, enabled);
+  },
+
+  getEnforcerMode() {
+    return ipcRenderer.invoke(IPC_CHANNELS.GET_ENFORCER_MODE);
+  },
+
   onApplyProgress(cb: (progress: ApplyProgress) => void) {
     ipcRenderer.on(IPC_CHANNELS.APPLY_PROGRESS, (_event, progress: ApplyProgress) => {
       cb(progress);

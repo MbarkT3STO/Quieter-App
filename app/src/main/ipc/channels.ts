@@ -26,6 +26,10 @@ export const IPC_CHANNELS = {
   SAVE_SETTINGS: 'peakmac:save-settings',
   /** Progress event pushed from main to renderer during apply */
   APPLY_PROGRESS: 'peakmac:apply-progress',
+  /** Toggle Persistent Enforcer (launch at login with --hidden) */
+  SET_ENFORCER_MODE: 'peakmac:set-enforcer-mode',
+  /** Get current Persistent Enforcer state */
+  GET_ENFORCER_MODE: 'peakmac:get-enforcer-mode',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

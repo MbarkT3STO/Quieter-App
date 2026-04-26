@@ -375,4 +375,93 @@ export class ServiceManager {
   public hasBackup(): boolean {
     return fs.existsSync(this.backupPath);
   }
+
+  /**
+   * Enforce disabled states for all services that were explicitly disabled by the user.
+   * Reads the backup snapshot to determine which services should be disabled, then
+   * re-disables any that macOS has re-enabled since the last run.
+   * Designed to run silently at login (--hidden mode) with no BrowserWindow.
+   */
+  public async enforceDisabledStates(): Promise<void> {
+    logger.info(CONTEXT, 'Enforcer mode: checking for services that need re-disabling');
+
+    if (!fs.existsSync(this.backupPath)) {
+      logger.info(CONTEXT, 'Enforcer mode: no backup snapshot found, nothing to enforce');
+      return;
+    }
+
+    let snapshot: BackupSnapshot;
+    try {
+      const raw = fs.readFileSync(this.backupPath, 'utf-8');
+      snapshot = JSON.parse(raw) as BackupSnapshot;
+    } catch (err) {
+      logger.error(CONTEXT, 'Enforcer mode: failed to read backup snapshot', { err });
+      return;
+    }
+
+    // Collect the services the user explicitly disabled (i.e. not Enabled in backup)
+    const disabledInBackup = snapshot.states
+      .filter((entry) => entry.state === ServiceState.Disabled)
+      .map((entry) => entry.serviceId);
+
+    if (disabledInBackup.length === 0) {
+      logger.info(CONTEXT, 'Enforcer mode: no disabled services in backup, nothing to enforce');
+      return;
+    }
+
+    // Read current live states
+    const liveResult = await this.getAllServicesWithState();
+    if (!liveResult.success) {
+      logger.error(CONTEXT, 'Enforcer mode: failed to read live service states', {
+        error: liveResult.error,
+      });
+      return;
+    }
+
+    // Find services that should be disabled but are currently running
+    const toDisable: ServiceChange[] = liveResult.data
+      .filter(
+        (s) =>
+          disabledInBackup.includes(s.id) &&
+          s.runtimeState.currentState === ServiceState.Enabled,
+      )
+      .map((s) => ({ serviceId: s.id, action: ChangeAction.Disable }));
+
+    if (toDisable.length === 0) {
+      logger.info(CONTEXT, 'Enforcer mode: all disabled services are already disabled');
+      return;
+    }
+
+    logger.info(CONTEXT, `Enforcer mode: re-disabling ${toDisable.length} service(s)`, {
+      services: toDisable.map((c) => c.serviceId),
+    });
+
+    // Apply changes silently — no BrowserWindow to send progress to
+    await this.applyChangesSilent(toDisable);
+
+    logger.info(CONTEXT, 'Enforcer mode: enforcement complete');
+  }
+
+  /**
+   * Apply a batch of service changes without a BrowserWindow (silent mode).
+   * Used by enforceDisabledStates when running headless at login.
+   */
+  private async applyChangesSilent(changes: ServiceChange[]): Promise<void> {
+    for (const change of changes) {
+      const service = SERVICE_REGISTRY.find((s) => s.id === change.serviceId);
+      if (service === undefined) {
+        logger.warn(CONTEXT, `Enforcer mode: unknown service ${change.serviceId}, skipping`);
+        continue;
+      }
+
+      const result = await this.applyChange(service, change.action);
+      if (result.success) {
+        logger.info(CONTEXT, `Enforcer mode: re-disabled ${service.id}`);
+      } else {
+        logger.error(CONTEXT, `Enforcer mode: failed to re-disable ${service.id}`, {
+          error: result.error,
+        });
+      }
+    }
+  }
 }
