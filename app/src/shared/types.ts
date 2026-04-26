@@ -101,6 +101,12 @@ export interface MacService {
   requiresRestart: boolean;
   /** Whether admin/sudo privileges are required */
   requiresAdmin: boolean;
+  /**
+   * Whether this service is protected by System Integrity Protection (SIP).
+   * SIP-protected services can only be disabled after booting into Recovery Mode
+   * and running `csrutil disable`. Toggling them while SIP is active will fail.
+   */
+  requiresSip?: boolean;
 }
 
 // ─── Runtime State ────────────────────────────────────────────────────────────

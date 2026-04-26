@@ -29,6 +29,18 @@
   border: 1px solid rgba(248, 113, 113, 0.2);
 }
 
+.badge-sip {
+  background: rgba(139, 92, 246, 0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+[data-theme="light"] .badge-sip {
+  background: rgba(109, 40, 217, 0.08);
+  color: #6d28d9;
+  border: 1px solid rgba(109, 40, 217, 0.2);
+}
+
 .badge svg {
   width: 10px;
   height: 10px;

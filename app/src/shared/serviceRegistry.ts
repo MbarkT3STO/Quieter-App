@@ -37,6 +37,7 @@ const performanceServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://developer.apple.com/library/archive/documentation/Carbon/Conceptual/MetadataIntro/MetadataIntro.html
   },
   {
@@ -85,6 +86,7 @@ const performanceServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://support.apple.com/en-us/HT201666
   },
   {
@@ -224,6 +226,7 @@ const networkServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: true,
     requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://developer.apple.com/bonjour/
   },
   {
@@ -245,6 +248,7 @@ const networkServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://support.apple.com/en-us/HT204690
   },
   {
@@ -286,6 +290,7 @@ const networkServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://developer.apple.com/documentation/corebluetooth
   },
   {
@@ -307,6 +312,7 @@ const networkServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://support.apple.com/guide/mac-help/connect-mac-shared-computers-servers-mchlp1140/mac
   },
 ];
@@ -586,6 +592,7 @@ const privacyServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://developer.apple.com/documentation/os/logging
   },
 ];
