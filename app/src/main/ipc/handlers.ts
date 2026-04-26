@@ -10,6 +10,8 @@ import os from 'os';
 import { IPC_CHANNELS } from './channels.js';
 import { ServiceManager } from '../services/ServiceManager.js';
 import { SystemInfoService } from '../services/SystemInfoService.js';
+import { HistoryService } from '../services/HistoryService.js';
+import { SipService } from '../services/SipService.js';
 import { logger } from '../utils/logger.js';
 import type { Result, ServiceChange, AppSettings, SystemReport } from '../../shared/types.js';
 import { CpuMethod } from '../../shared/types.js';
@@ -38,6 +40,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // Apply saved CPU method immediately on startup
   const savedSettings = loadSettings(settingsPath);
   sysInfo.setCpuMethod(savedSettings.cpuMethod ?? CpuMethod.LoadAvg);
+  const sipService = SipService.getInstance();
 
   // ─── getServices ────────────────────────────────────────────────────────────
   ipcMain.handle(IPC_CHANNELS.GET_SERVICES, async (): Promise<Result<unknown>> => {
@@ -231,6 +234,47 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     } catch (err) {
       logger.error(CONTEXT, 'getEnforcerMode failed', { err });
       return { success: false, error: 'Failed to get enforcer mode', code: 'ENFORCER_GET_FAILED' };
+    }
+  });
+
+  // ─── getHistory ──────────────────────────────────────────────────────────────
+  ipcMain.handle(IPC_CHANNELS.GET_HISTORY, (): Result<unknown> => {
+    try {
+      return { success: true, data: HistoryService.getInstance().readAll() };
+    } catch (err) {
+      logger.error(CONTEXT, 'getHistory failed', { err });
+      return { success: false, error: 'Failed to get history', code: 'HISTORY_GET_FAILED' };
+    }
+  });
+
+  // ─── clearHistory ────────────────────────────────────────────────────────────
+  ipcMain.handle(IPC_CHANNELS.CLEAR_HISTORY, (): Result<unknown> => {
+    try {
+      HistoryService.getInstance().clear();
+      return { success: true, data: undefined };
+    } catch (err) {
+      logger.error(CONTEXT, 'clearHistory failed', { err });
+      return { success: false, error: 'Failed to clear history', code: 'HISTORY_CLEAR_FAILED' };
+    }
+  });
+
+  // ─── hasIntent ───────────────────────────────────────────────────────────────
+  ipcMain.handle(IPC_CHANNELS.HAS_INTENT, (): Result<unknown> => {
+    try {
+      return { success: true, data: serviceManager.hasIntent() };
+    } catch (err) {
+      logger.error(CONTEXT, 'hasIntent failed', { err });
+      return { success: false, error: 'Failed to check intent', code: 'INTENT_CHECK_FAILED' };
+    }
+  });
+
+  // ─── getSipStatus ──────────────────────────────────────────────────────────
+  ipcMain.handle(IPC_CHANNELS.GET_SIP_STATUS, async (): Promise<Result<boolean>> => {
+    try {
+      return await sipService.getSipStatus();
+    } catch (err) {
+      logger.error(CONTEXT, 'getSipStatus failed', { err });
+      return { success: false, error: 'Failed to check SIP status', code: 'GET_SIP_STATUS_FAILED' };
     }
   });
 

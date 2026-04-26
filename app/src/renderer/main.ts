@@ -120,11 +120,12 @@ async function loadInitialData(): Promise<void> {
 
   try {
     // Load in parallel
-    const [servicesResult, statsResult, settingsResult, backupResult] = await Promise.all([
+    const [servicesResult, statsResult, settingsResult, backupResult, sipResult] = await Promise.all([
       window.peakMacAPI.getServices(),
       window.peakMacAPI.getSystemStats(),
       window.peakMacAPI.getSettings(),
       window.peakMacAPI.hasBackup(),
+      window.peakMacAPI.getSipStatus(),
     ]);
 
     if (servicesResult.success) {
@@ -144,6 +145,10 @@ async function loadInitialData(): Promise<void> {
 
     if (backupResult.success) {
       store.set('hasBackup', backupResult.data);
+    }
+
+    if (sipResult.success) {
+      store.set('sipActive', sipResult.data);
     }
   } finally {
     store.set('isLoading', false);

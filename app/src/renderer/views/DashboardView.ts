@@ -9,6 +9,7 @@ import { router } from '../core/Router.js';
 import { showToast } from '../components/Toast.js';
 import type { SystemStats } from '../../shared/types.js';
 import { ChangeAction, RiskLevel, ServiceCategory, ServiceState } from '../../shared/types.js';
+import { PRESETS } from '../../shared/presets.js';
 
 const CPU_HISTORY_LENGTH = 30;
 
@@ -110,6 +111,33 @@ export class DashboardView extends Component {
           <button class="btn btn-ghost" id="qa-view-privacy" aria-label="View privacy services">
             View Privacy
           </button>
+        </div>
+      </div>
+
+      <div class="presets-section" role="region" aria-label="Quick presets">
+        <div class="quick-actions-title">Quick Presets</div>
+        <div class="presets-grid">
+          ${PRESETS.map((preset) => `
+            <button
+              class="preset-card"
+              data-preset-id="${preset.id}"
+              aria-label="Apply ${preset.name} preset"
+            >
+              <div class="preset-card-header">
+                <span class="preset-card-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                    <path d="${preset.icon}" />
+                  </svg>
+                </span>
+                <span class="preset-card-risk preset-card-risk--${preset.maxRisk}" aria-label="Risk: ${preset.maxRisk}">
+                  ${preset.maxRisk}
+                </span>
+              </div>
+              <div class="preset-card-name">${preset.name}</div>
+              <div class="preset-card-desc">${preset.description}</div>
+              <div class="preset-card-count">${preset.serviceIds.length} services</div>
+            </button>
+          `).join('')}
         </div>
       </div>
 
@@ -296,6 +324,23 @@ export class DashboardView extends Component {
     const privacyBtn = this.queryOptional<HTMLButtonElement>('#qa-view-privacy');
     privacyBtn?.addEventListener('click', () => {
       router.navigate(`#/category/${ServiceCategory.Privacy}`);
+    });
+
+    // Preset cards
+    const presetsGrid = this.queryOptional<HTMLElement>('.presets-grid');
+    presetsGrid?.addEventListener('click', (e) => {
+      const card = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-preset-id]');
+      if (card === null) return;
+      const presetId = card.dataset['presetId'];
+      if (presetId === undefined) return;
+      const preset = PRESETS.find((p) => p.id === presetId);
+      if (preset === undefined) return;
+
+      store.applyPreset(preset.serviceIds);
+      showToast(
+        'info',
+        `${preset.serviceIds.length} services staged for ${preset.name}. Click Apply to confirm.`,
+      );
     });
   }
 

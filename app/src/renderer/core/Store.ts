@@ -4,7 +4,7 @@
  */
 
 import type { AppState, ServiceWithState, SystemStats, AppSettings, ApplyProgress } from '../../shared/types.js';
-import { ChangeAction, ServiceCategory } from '../../shared/types.js';
+import { ChangeAction, ServiceCategory, ServiceState } from '../../shared/types.js';
 import { DEFAULT_SETTINGS } from '../../shared/constants.js';
 import { eventBus } from './EventBus.js';
 
@@ -25,6 +25,7 @@ class Store {
     settings: { ...DEFAULT_SETTINGS },
     hasBackup: false,
     isFirstLaunch: false,
+    sipActive: true, // Default to true (safest)
     error: null,
   };
 
@@ -92,6 +93,10 @@ class Store {
 
   /** Toggle a pending change for a service */
   public togglePendingChange(serviceId: string, action: ChangeAction): void {
+    // Guard: do not allow pending changes for SIP-protected services with no alternative
+    const svc = this.state.services.find((s) => s.id === serviceId);
+    if (svc?.requiresSip === true && svc.sipAlternative === undefined) return;
+
     const pending = new Map(this.state.pendingChanges);
 
     // If same action already pending, remove it (toggle off)
@@ -167,6 +172,28 @@ class Store {
   /** Get services for a specific category */
   public getServicesByCategory(category: ServiceCategory): ServiceWithState[] {
     return this.state.services.filter((s) => s.category === category);
+  }
+
+  /**
+   * Stage all services in a preset for disabling.
+   * Skips SIP-locked services and services already disabled.
+   * Does NOT immediately apply — the ApplyBar appears as normal.
+   */
+  public applyPreset(serviceIds: string[]): void {
+    const services = this.state.services;
+    const pending = new Map(this.state.pendingChanges);
+
+    for (const id of serviceIds) {
+      const svc = services.find((s) => s.id === id);
+      if (svc === undefined) continue;
+      if (svc.requiresSip === true && svc.sipAlternative === undefined) continue; // skip SIP-locked services with no alternative
+      if (svc.runtimeState.currentState === ServiceState.Enabled) {
+        pending.set(id, ChangeAction.Disable); // only stage if currently enabled
+      }
+    }
+
+    this.set('pendingChanges', pending);
+    eventBus.emit('pending:changed', pending);
   }
 }
 

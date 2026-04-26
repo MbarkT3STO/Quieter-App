@@ -1,7 +1,8 @@
 /**
  * ServiceManager — orchestrates all service operations.
- * Coordinates LaunchctlService, DefaultsService, and the service registry.
- * Handles snapshot/backup, apply-with-rollback, and state reading.
+ * Coordinates LaunchctlService, DefaultsService, SipAlternativeService, and the service registry.
+ * Handles snapshot/backup, apply-with-rollback, state reading, intent tracking, and history.
+ * SIP-protected services are routed through SipAlternativeService when they have a sipAlternative.
  */
 
 import fs from 'fs';
@@ -11,7 +12,10 @@ import { BrowserWindow } from 'electron';
 import { SERVICE_REGISTRY } from '../../shared/serviceRegistry.js';
 import { LaunchctlService } from './LaunchctlService.js';
 import { DefaultsService } from './DefaultsService.js';
+import { SipAlternativeService } from './SipAlternativeService.js';
+import { SipService } from './SipService.js';
 import { SystemInfoService } from './SystemInfoService.js';
+import { HistoryService } from './HistoryService.js';
 import { logger } from '../utils/logger.js';
 import { IPC_CHANNELS } from '../ipc/channels.js';
 import type {
@@ -22,6 +26,7 @@ import type {
   ServiceChange,
   ApplyProgress,
   ApplyResult,
+  UserIntent,
 } from '../../shared/types.js';
 import {
   ServiceState,
@@ -31,6 +36,7 @@ import {
 import {
   DATA_DIR_NAME,
   BACKUP_FILENAME,
+  INTENT_FILENAME,
   APP_VERSION,
 } from '../../shared/constants.js';
 
@@ -46,13 +52,17 @@ export class ServiceManager {
   private static instance: ServiceManager;
   private readonly launchctl = LaunchctlService.getInstance();
   private readonly defaults = DefaultsService.getInstance();
+  private readonly sipAlt = SipAlternativeService.getInstance();
+  private readonly sipStatus = SipService.getInstance();
   private readonly sysInfo = SystemInfoService.getInstance();
   private readonly dataDir: string;
   private readonly backupPath: string;
+  private readonly intentPath: string;
 
   private constructor() {
     this.dataDir = path.join(os.homedir(), DATA_DIR_NAME);
     this.backupPath = path.join(this.dataDir, BACKUP_FILENAME);
+    this.intentPath = path.join(this.dataDir, INTENT_FILENAME);
     fs.mkdirSync(this.dataDir, { recursive: true });
   }
 
@@ -108,12 +118,25 @@ export class ServiceManager {
 
   /**
    * Read the current state of a single service.
+   * For SIP-protected services with a sipAlternative that has a state check,
+   * uses the alternative state check instead of launchctl.
    */
   private async readServiceState(
     service: MacService,
     launchctlStates: Result<Map<string, ServiceState>>,
   ): Promise<ServiceState> {
     try {
+      const sipActive = await this.sipStatus.getSipStatus();
+      
+      // If service has a SIP alternative with state checking, prefer it.
+      // This gives accurate state for services where launchctl state might be unreliable.
+      if (service.sipAlternative?.stateCheckCmd !== undefined) {
+        const altState = await this.sipAlt.getState(service.sipAlternative, service.id);
+        if (altState.success && altState.data !== ServiceState.Unknown) {
+          return altState.data;
+        }
+      }
+
       if (
         service.controlMethod === ControlMethod.Launchctl ||
         service.controlMethod === ControlMethod.Hybrid
@@ -122,6 +145,7 @@ export class ServiceManager {
           return launchctlStates.data.get(service.launchAgentId) ?? ServiceState.Unknown;
         }
       }
+
 
       if (
         service.controlMethod === ControlMethod.Defaults ||
@@ -145,15 +169,17 @@ export class ServiceManager {
    *
    * @param changes - Array of service changes to apply
    * @param window - BrowserWindow to send progress events to
+   * @param preloadedServices - Optional pre-loaded service states (avoids double-query)
    */
   public async applyChanges(
     changes: ServiceChange[],
     window: BrowserWindow,
+    preloadedServices?: ServiceWithState[],
   ): Promise<Result<ApplyResult>> {
     logger.info(CONTEXT, `Applying ${changes.length} changes`);
 
-    // Take a snapshot before applying
-    const snapshotResult = await this.takeSnapshot();
+    // Take a snapshot before applying (pass preloaded states to avoid double-query)
+    const snapshotResult = await this.takeSnapshot(preloadedServices);
     if (!snapshotResult.success) {
       logger.warn(CONTEXT, 'Failed to take snapshot before apply', { error: snapshotResult.error });
     }
@@ -185,6 +211,17 @@ export class ServiceManager {
       });
 
       const result = await this.applyChange(service, change.action);
+
+      // Append to history regardless of success/failure
+      await HistoryService.getInstance().append({
+        id: `${Date.now()}-${service.id}`,
+        timestamp: new Date().toISOString(),
+        action: change.action,
+        serviceId: service.id,
+        serviceName: service.name,
+        success: result.success,
+        ...(!result.success ? { error: result.error } : {}),
+      });
 
       if (result.success) {
         applied.push(change);
@@ -239,6 +276,17 @@ export class ServiceManager {
       status: 'success',
     });
 
+    // Write intent after successful apply
+    await this.writeIntent(applied);
+
+    // Post-apply verification
+    const mismatches = await this.verifyAppliedChanges(applied);
+    if (mismatches.length > 0) {
+      logger.warn(CONTEXT, `${mismatches.length} service(s) did not change state as expected`, {
+        mismatches,
+      });
+    }
+
     return {
       success: true,
       data: {
@@ -247,24 +295,68 @@ export class ServiceManager {
         failed: 0,
         rolledBack: false,
         errors: [],
+        verificationMismatches: mismatches,
       },
     };
   }
 
   /**
    * Apply a single service change.
+   *
+   * Routing priority:
+   * 1. If service has a `sipAlternative`, use it (handles SIP-protected & auto-re-enabling services).
+   * 2. Otherwise fall through to standard launchctl/defaults.
+   *
+   * For SIP services: the alternative is the ONLY path — launchctl will fail.
+   * For non-SIP services with alternatives: try alternative first for robustness,
+   * then also run launchctl/defaults for belt-and-suspenders coverage.
    */
   private async applyChange(service: MacService, action: ChangeAction): Promise<Result<void>> {
     const isDisable = action === ChangeAction.Disable;
+    const sipActive = await this.sipStatus.getSipStatus();
 
+    // ── SIP Alternative path ──────────────────────────────────────────────────
+    // Only use alternatives if SIP is ACTIVE. If disabled, launchctl works fine.
+    if (sipActive.success && sipActive.data === true && service.sipAlternative !== undefined) {
+      const altResult = isDisable
+        ? await this.sipAlt.disable(service.sipAlternative, service.id)
+        : await this.sipAlt.enable(service.sipAlternative, service.id);
+
+      if (!altResult.success) {
+        logger.warn(CONTEXT, `SIP alternative failed for ${service.id}`, {
+          error: altResult.error,
+        });
+        // If SIP-protected, we can't fall through — return the error
+        if (service.requiresSip === true) {
+          return altResult;
+        }
+        // For non-SIP services with alternatives, fall through to standard path
+      } else if (service.requiresSip === true) {
+        // SIP-protected service — alternative succeeded, skip standard path
+        return altResult;
+      }
+      // Non-SIP with alternative: continue to also run standard path for coverage
+    }
+
+    // Guard: if SIP is active and this is a SIP-protected service with NO alternative,
+    // we cannot proceed with the standard path as it will fail and cause UI resets.
+    if (sipActive.success && sipActive.data === true && service.requiresSip === true && service.sipAlternative === undefined) {
+      return {
+        success: false,
+        error: `Service "${service.name}" is protected by System Integrity Protection (SIP) and has no safe alternative command.`,
+        code: 'SIP_LOCKED',
+      };
+    }
+
+    // ── Standard launchctl path ────────────────────────────────────────────────
     if (
       service.controlMethod === ControlMethod.Launchctl ||
       service.controlMethod === ControlMethod.Hybrid
     ) {
       if (service.launchAgentId !== undefined) {
         const result = isDisable
-          ? await this.launchctl.disableService(service.launchAgentId, service.requiresAdmin)
-          : await this.launchctl.enableService(service.launchAgentId, service.requiresAdmin);
+          ? await this.launchctl.disableService(service.launchAgentId)
+          : await this.launchctl.enableService(service.launchAgentId);
 
         if (!result.success && service.controlMethod === ControlMethod.Launchctl) {
           return result;
@@ -272,6 +364,7 @@ export class ServiceManager {
       }
     }
 
+    // ── Standard defaults path ─────────────────────────────────────────────────
     if (
       service.controlMethod === ControlMethod.Defaults ||
       service.controlMethod === ControlMethod.Hybrid
@@ -312,16 +405,104 @@ export class ServiceManager {
   }
 
   /**
-   * Take a snapshot of all current service states and write to backup.json.
+   * Write the user's intent to intent.json after a successful apply.
+   * Merges newly applied changes into any existing intent.
    */
-  public async takeSnapshot(): Promise<Result<void>> {
-    const servicesResult = await this.getAllServicesWithState();
-    if (!servicesResult.success) return servicesResult;
+  private async writeIntent(appliedChanges: ServiceChange[]): Promise<void> {
+    // Load existing intent or start fresh
+    let existing: Record<string, ServiceState> = {};
+    try {
+      if (fs.existsSync(this.intentPath)) {
+        const raw = fs.readFileSync(this.intentPath, 'utf-8');
+        const parsed = JSON.parse(raw) as UserIntent;
+        existing = parsed.intendedStates;
+      }
+    } catch {
+      // start fresh
+    }
+
+    // Merge the newly applied changes into intent
+    for (const change of appliedChanges) {
+      existing[change.serviceId] =
+        change.action === ChangeAction.Disable
+          ? ServiceState.Disabled
+          : ServiceState.Enabled;
+    }
+
+    const intent: UserIntent = {
+      updatedAt: new Date().toISOString(),
+      intendedStates: existing,
+    };
+
+    try {
+      fs.writeFileSync(this.intentPath, JSON.stringify(intent, null, 2), 'utf-8');
+      logger.info(CONTEXT, `Intent written with ${Object.keys(existing).length} entries`);
+    } catch (err) {
+      logger.error(CONTEXT, 'Failed to write intent file', { err });
+    }
+  }
+
+  /**
+   * Verify that applied changes actually took effect.
+   * Returns a list of mismatches (services that didn't change as expected).
+   */
+  private async verifyAppliedChanges(
+    changes: ServiceChange[],
+  ): Promise<NonNullable<ApplyResult['verificationMismatches']>> {
+    const bundleIds = changes
+      .map((c) => SERVICE_REGISTRY.find((s) => s.id === c.serviceId)?.launchAgentId)
+      .filter((id): id is string => id !== undefined);
+
+    if (bundleIds.length === 0) return [];
+
+    // Small delay to let launchctl settle
+    await new Promise<void>((resolve) => setTimeout(resolve, 800));
+
+    const stateResult = await this.launchctl.getMultipleServiceStates(bundleIds);
+    if (!stateResult.success) return [];
+
+    const mismatches: NonNullable<ApplyResult['verificationMismatches']> = [];
+
+    for (const change of changes) {
+      const service = SERVICE_REGISTRY.find((s) => s.id === change.serviceId);
+      if (service?.launchAgentId === undefined) continue;
+
+      const actualState = stateResult.data.get(service.launchAgentId);
+      const expectedState =
+        change.action === ChangeAction.Disable ? ServiceState.Disabled : ServiceState.Enabled;
+
+      if (actualState !== undefined && actualState !== expectedState) {
+        mismatches.push({
+          serviceId: service.id,
+          serviceName: service.name,
+          expectedState,
+          actualState,
+        });
+      }
+    }
+
+    return mismatches;
+  }
+
+  /**
+   * Take a snapshot of all current service states and write to backup.json.
+   * Accepts optional pre-loaded states to avoid a redundant system query.
+   */
+  public async takeSnapshot(preloaded?: ServiceWithState[]): Promise<Result<void>> {
+    // If preloaded states provided, use them. Otherwise query system.
+    let services: ServiceWithState[];
+    if (preloaded !== undefined) {
+      services = preloaded;
+    } else {
+      const servicesResult = await this.getAllServicesWithState();
+      if (!servicesResult.success) return servicesResult;
+      services = servicesResult.data;
+    }
 
     const snapshot: BackupSnapshot = {
       createdAt: new Date().toISOString(),
       appVersion: APP_VERSION,
-      states: servicesResult.data.map((s) => ({
+      states: services.map((s) => ({
         serviceId: s.id,
         state: s.runtimeState.currentState,
       })),
@@ -377,69 +558,66 @@ export class ServiceManager {
   }
 
   /**
-   * Enforce disabled states for all services that were explicitly disabled by the user.
-   * Reads the backup snapshot to determine which services should be disabled, then
+   * Check if an intent file exists.
+   */
+  public hasIntent(): boolean {
+    return fs.existsSync(this.intentPath);
+  }
+
+  /**
+   * Enforce disabled states using intent.json as the source of truth.
+   * Reads intent.json to determine which services should be disabled, then
    * re-disables any that macOS has re-enabled since the last run.
    * Designed to run silently at login (--hidden mode) with no BrowserWindow.
    */
   public async enforceDisabledStates(): Promise<void> {
-    logger.info(CONTEXT, 'Enforcer mode: checking for services that need re-disabling');
+    logger.info(CONTEXT, 'Enforcer: starting');
 
-    if (!fs.existsSync(this.backupPath)) {
-      logger.info(CONTEXT, 'Enforcer mode: no backup snapshot found, nothing to enforce');
+    if (!fs.existsSync(this.intentPath)) {
+      logger.info(CONTEXT, 'Enforcer: no intent file found, nothing to enforce');
       return;
     }
 
-    let snapshot: BackupSnapshot;
+    let intent: UserIntent;
     try {
-      const raw = fs.readFileSync(this.backupPath, 'utf-8');
-      snapshot = JSON.parse(raw) as BackupSnapshot;
+      const raw = fs.readFileSync(this.intentPath, 'utf-8');
+      intent = JSON.parse(raw) as UserIntent;
     } catch (err) {
-      logger.error(CONTEXT, 'Enforcer mode: failed to read backup snapshot', { err });
+      logger.error(CONTEXT, 'Enforcer: failed to read intent file', { err });
       return;
     }
 
-    // Collect the services the user explicitly disabled (i.e. not Enabled in backup)
-    const disabledInBackup = snapshot.states
-      .filter((entry) => entry.state === ServiceState.Disabled)
-      .map((entry) => entry.serviceId);
+    const shouldBeDisabled = Object.entries(intent.intendedStates)
+      .filter(([, state]) => state === ServiceState.Disabled)
+      .map(([serviceId]) => serviceId);
 
-    if (disabledInBackup.length === 0) {
-      logger.info(CONTEXT, 'Enforcer mode: no disabled services in backup, nothing to enforce');
+    if (shouldBeDisabled.length === 0) {
+      logger.info(CONTEXT, 'Enforcer: no services marked for enforcement');
       return;
     }
 
-    // Read current live states
     const liveResult = await this.getAllServicesWithState();
     if (!liveResult.success) {
-      logger.error(CONTEXT, 'Enforcer mode: failed to read live service states', {
-        error: liveResult.error,
-      });
+      logger.error(CONTEXT, 'Enforcer: could not read live states', { error: liveResult.error });
       return;
     }
 
-    // Find services that should be disabled but are currently running
     const toDisable: ServiceChange[] = liveResult.data
       .filter(
         (s) =>
-          disabledInBackup.includes(s.id) &&
+          shouldBeDisabled.includes(s.id) &&
           s.runtimeState.currentState === ServiceState.Enabled,
       )
       .map((s) => ({ serviceId: s.id, action: ChangeAction.Disable }));
 
     if (toDisable.length === 0) {
-      logger.info(CONTEXT, 'Enforcer mode: all disabled services are already disabled');
+      logger.info(CONTEXT, 'Enforcer: all intended-disabled services are already disabled');
       return;
     }
 
-    logger.info(CONTEXT, `Enforcer mode: re-disabling ${toDisable.length} service(s)`, {
-      services: toDisable.map((c) => c.serviceId),
-    });
-
-    // Apply changes silently — no BrowserWindow to send progress to
+    logger.info(CONTEXT, `Enforcer: re-disabling ${toDisable.length} services`);
     await this.applyChangesSilent(toDisable);
-
-    logger.info(CONTEXT, 'Enforcer mode: enforcement complete');
+    logger.info(CONTEXT, 'Enforcer: done');
   }
 
   /**
@@ -455,6 +633,18 @@ export class ServiceManager {
       }
 
       const result = await this.applyChange(service, change.action);
+
+      // Append to history regardless of success/failure
+      await HistoryService.getInstance().append({
+        id: `${Date.now()}-${service.id}`,
+        timestamp: new Date().toISOString(),
+        action: change.action,
+        serviceId: service.id,
+        serviceName: service.name,
+        success: result.success,
+        ...(!result.success ? { error: result.error } : {}),
+      });
+
       if (result.success) {
         logger.info(CONTEXT, `Enforcer mode: re-disabled ${service.id}`);
       } else {

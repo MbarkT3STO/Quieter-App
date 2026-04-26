@@ -72,6 +72,37 @@ export interface ServiceImpact {
   ram: ImpactLevel;
 }
 
+/**
+ * Alternative command to achieve the same effect when SIP prevents
+ * direct launchctl control, or when the service auto-re-enables.
+ * If defined on a service, the app will use this instead of
+ * launchctl disable/bootout for that service.
+ */
+export interface SipAlternative {
+  /** The executable path for the disable command */
+  disableCmd: string;
+  /** Arguments for the disable command */
+  disableArgs: string[];
+  /** The executable path for the enable command */
+  enableCmd: string;
+  /** Arguments for the enable command */
+  enableArgs: string[];
+  /** The executable path for checking current state (optional) */
+  stateCheckCmd?: string;
+  /** Arguments for the state check command */
+  stateCheckArgs?: string[];
+  /**
+   * How to interpret the state check output.
+   * 'outputContains' — if stdout contains `stateCheckDisabledValue`, service is disabled.
+   * 'exitCode' — exit code 0 = last command succeeded, check output.
+   */
+  stateCheckMode?: 'outputContains' | 'exitCode';
+  /** String to look for in state check output to determine disabled state */
+  stateCheckDisabledValue?: string;
+  /** Brief explanation of the mechanism, shown to user */
+  mechanism: string;
+}
+
 export interface MacService {
   /** Unique slug identifier, e.g. "spotlight-indexing" */
   id: string;
@@ -107,6 +138,13 @@ export interface MacService {
    * and running `csrutil disable`. Toggling them while SIP is active will fail.
    */
   requiresSip?: boolean;
+  /**
+   * Alternative command that achieves the same user-visible effect without
+   * needing to launchctl disable the SIP-protected daemon.
+   * When defined, the app routes disable/enable through this instead.
+   * Also used for services that auto-re-enable after reboot.
+   */
+  sipAlternative?: SipAlternative;
 }
 
 // ─── Runtime State ────────────────────────────────────────────────────────────
@@ -137,6 +175,13 @@ export interface ApplyResult {
   failed: number;
   rolledBack: boolean;
   errors: string[];
+  /** Services that were applied successfully but did not change state as expected */
+  verificationMismatches?: Array<{
+    serviceId: string;
+    serviceName: string;
+    expectedState: ServiceState;
+    actualState: ServiceState;
+  }>;
 }
 
 // ─── System Stats ─────────────────────────────────────────────────────────────
@@ -189,6 +234,14 @@ export interface PeakMacAPI {
   setEnforcerMode(enabled: boolean): Promise<Result<void>>;
   /** Check whether Persistent Enforcer is currently active */
   getEnforcerMode(): Promise<Result<boolean>>;
+  /** Get change history log */
+  getHistory(): Promise<Result<HistoryEntry[]>>;
+  /** Clear change history log */
+  clearHistory(): Promise<Result<void>>;
+  /** Check if intent file exists (enforcer has data to work with) */
+  hasIntent(): Promise<Result<boolean>>;
+  /** Get current System Integrity Protection (SIP) status */
+  getSipStatus(): Promise<Result<boolean>>;
 }
 
 // ─── Composite Types ──────────────────────────────────────────────────────────
@@ -205,6 +258,25 @@ export interface AppSettings {
   theme: 'dark' | 'light' | 'system';
   /** CPU measurement method shown in the dashboard */
   cpuMethod: CpuMethod;
+}
+
+// ─── Intent & History ─────────────────────────────────────────────────────────
+
+export interface UserIntent {
+  /** ISO timestamp of last update */
+  updatedAt: string;
+  /** Map of serviceId → intended state after user's last successful apply */
+  intendedStates: Record<string, ServiceState>;
+}
+
+export interface HistoryEntry {
+  id: string;           // unique: timestamp + serviceId
+  timestamp: string;    // ISO
+  action: ChangeAction;
+  serviceId: string;
+  serviceName: string;
+  success: boolean;
+  error?: string;
 }
 
 // ─── Report ───────────────────────────────────────────────────────────────────
@@ -232,5 +304,6 @@ export interface AppState {
   settings: AppSettings;
   hasBackup: boolean;
   isFirstLaunch: boolean;
+  sipActive: boolean;
   error: string | null;
 }

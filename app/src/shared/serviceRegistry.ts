@@ -7,12 +7,113 @@
 
 import {
   MacService,
+  SipAlternative,
   ServiceCategory,
   RiskLevel,
   ImpactLevel,
   ControlMethod,
   ServiceState,
 } from './types.js';
+
+// ─── SIP Alternative Definitions ──────────────────────────────────────────────
+// Reusable alternative commands for SIP-protected services.
+// These achieve the same user-visible effect without needing launchctl disable.
+
+/** Spotlight: use mdutil to toggle indexing (daemon stays loaded but idles) */
+const SPOTLIGHT_ALT: SipAlternative = {
+  disableCmd: '/usr/bin/mdutil',
+  disableArgs: ['-a', '-i', 'off'],
+  enableCmd: '/usr/bin/mdutil',
+  enableArgs: ['-a', '-i', 'on'],
+  stateCheckCmd: '/usr/bin/mdutil',
+  stateCheckArgs: ['-a', '-s'],
+  stateCheckMode: 'outputContains',
+  stateCheckDisabledValue: 'Indexing disabled',
+  mechanism: 'Uses mdutil to stop/start Spotlight indexing. Daemon stays loaded but idles.',
+};
+
+/** Bluetooth: toggle the radio power state via defaults (daemon stays alive) */
+const BLUETOOTH_ALT: SipAlternative = {
+  disableCmd: '/usr/bin/defaults',
+  disableArgs: ['write', '/Library/Preferences/com.apple.Bluetooth', 'ControllerPowerState', '-int', '0'],
+  enableCmd: '/usr/bin/defaults',
+  enableArgs: ['write', '/Library/Preferences/com.apple.Bluetooth', 'ControllerPowerState', '-int', '1'],
+  stateCheckCmd: '/usr/bin/defaults',
+  stateCheckArgs: ['read', '/Library/Preferences/com.apple.Bluetooth', 'ControllerPowerState'],
+  stateCheckMode: 'outputContains',
+  stateCheckDisabledValue: '0',
+  mechanism: 'Toggles the Bluetooth radio power state. Daemon stays loaded but radio is silent.',
+};
+
+/** Location Services: toggle via locationd preferences */
+const LOCATION_ALT: SipAlternative = {
+  disableCmd: '/usr/bin/defaults',
+  disableArgs: ['write', '/var/db/locationd/Library/Preferences/ByHost/com.apple.locationd', 'LocationServicesEnabled', '-int', '0'],
+  enableCmd: '/usr/bin/defaults',
+  enableArgs: ['write', '/var/db/locationd/Library/Preferences/ByHost/com.apple.locationd', 'LocationServicesEnabled', '-int', '1'],
+  stateCheckCmd: '/usr/bin/defaults',
+  stateCheckArgs: ['read', '/var/db/locationd/Library/Preferences/ByHost/com.apple.locationd', 'LocationServicesEnabled'],
+  stateCheckMode: 'outputContains',
+  stateCheckDisabledValue: '0',
+  mechanism: 'Toggles Location Services via locationd preferences. Daemon idles when disabled.',
+};
+
+/** NetBIOS: suppress via nsmb.conf (Apple-supported method) */
+const NETBIOS_ALT: SipAlternative = {
+  disableCmd: '/usr/bin/defaults',
+  disableArgs: ['write', 'com.apple.smb.server', 'EnabledServices', '-array'],
+  enableCmd: '/usr/bin/defaults',
+  enableArgs: ['write', 'com.apple.smb.server', 'EnabledServices', '-array', 'disk', 'print'],
+  mechanism: 'Disables SMB/NetBIOS services via server preferences. Daemon stays loaded but inactive.',
+};
+
+/** Bonjour: enable stealth mode to stop mDNS broadcasts */
+const BONJOUR_ALT: SipAlternative = {
+  disableCmd: '/usr/libexec/ApplicationFirewall/socketfilterfw',
+  disableArgs: ['--setstealthmode', 'on'],
+  enableCmd: '/usr/libexec/ApplicationFirewall/socketfilterfw',
+  enableArgs: ['--setstealthmode', 'off'],
+  stateCheckCmd: '/usr/libexec/ApplicationFirewall/socketfilterfw',
+  stateCheckArgs: ['--getstealthmode'],
+  stateCheckMode: 'outputContains',
+  stateCheckDisabledValue: 'enabled',
+  mechanism: 'Enables firewall stealth mode to block mDNS discovery broadcasts.',
+};
+
+/** Tailspin: opt out of analytics to stop the sampler */
+const TAILSPIN_ALT: SipAlternative = {
+  disableCmd: '/usr/bin/defaults',
+  disableArgs: ['write', '/Library/Application Support/CrashReporter/DiagnosticMessagesHistory', 'AutoSubmit', '-bool', 'false'],
+  enableCmd: '/usr/bin/defaults',
+  enableArgs: ['write', '/Library/Application Support/CrashReporter/DiagnosticMessagesHistory', 'AutoSubmit', '-bool', 'true'],
+  mechanism: 'Opts out of diagnostic data collection. Tailspin daemon idles when analytics are off.',
+};
+
+/** Siri: disable via defaults (stops voice listening and Siri features) */
+const SIRI_ALT: SipAlternative = {
+  disableCmd: '/usr/bin/defaults',
+  disableArgs: ['write', 'com.apple.assistant.support', 'Assistant Enabled', '-bool', 'false'],
+  enableCmd: '/usr/bin/defaults',
+  enableArgs: ['write', 'com.apple.assistant.support', 'Assistant Enabled', '-bool', 'true'],
+  stateCheckCmd: '/usr/bin/defaults',
+  stateCheckArgs: ['read', 'com.apple.assistant.support', 'Assistant Enabled'],
+  stateCheckMode: 'outputContains',
+  stateCheckDisabledValue: '0',
+  mechanism: 'Disables Siri assistant via user defaults. Daemon stays loaded but inactive.',
+};
+
+/** Apple Intelligence: disable via CloudSubscriptionFeatures (experimental) */
+const APPLE_INTEL_ALT: SipAlternative = {
+  disableCmd: '/usr/bin/defaults',
+  disableArgs: ['write', 'com.apple.CloudSubscriptionFeatures', 'optIn', '-bool', 'false'],
+  enableCmd: '/usr/bin/defaults',
+  enableArgs: ['write', 'com.apple.CloudSubscriptionFeatures', 'optIn', '-bool', 'true'],
+  stateCheckCmd: '/usr/bin/defaults',
+  stateCheckArgs: ['read', 'com.apple.CloudSubscriptionFeatures', 'optIn'],
+  stateCheckMode: 'outputContains',
+  stateCheckDisabledValue: '0',
+  mechanism: 'Disables Apple Intelligence features via opt-in preference. Stops ML model loading.',
+};
 
 // ─── Performance Category ─────────────────────────────────────────────────────
 
@@ -38,6 +139,7 @@ const performanceServices: MacService[] = [
     requiresRestart: false,
     requiresAdmin: true,
     requiresSip: true,
+    sipAlternative: SPOTLIGHT_ALT,
     // sourceUrl: https://developer.apple.com/library/archive/documentation/Carbon/Conceptual/MetadataIntro/MetadataIntro.html
   },
   {
@@ -71,13 +173,20 @@ const performanceServices: MacService[] = [
     id: 'sudden-motion-sensor',
     name: 'Sudden Motion Sensor',
     category: ServiceCategory.Performance,
-    controlMethod: ControlMethod.Launchctl,
-    launchAgentId: 'com.apple.sms',
+    controlMethod: ControlMethod.Defaults,
+    defaultsCommand: {
+      domain: 'NSGlobalDomain',
+      key: 'sms',
+      type: 'int',
+      disabledValue: '0',
+      enabledValue: '1',
+    },
     risk: RiskLevel.Safe,
     impact: { cpu: ImpactLevel.Low, ram: ImpactLevel.None },
     description:
-      'The Sudden Motion Sensor daemon monitors accelerometer data on MacBooks to park hard drive ' +
-      'heads if a sudden drop or impact is detected, preventing data loss.',
+      'The Sudden Motion Sensor monitors accelerometer data on MacBooks to park hard drive ' +
+      'heads if a sudden drop or impact is detected, preventing data loss. ' +
+      'Controlled via sysctl (not launchd) — requires SIP disabled to change.',
     disableEffect:
       'Removes a small background polling process. Safe to disable on Macs with SSDs only ' +
       '(no spinning hard drive to protect).',
@@ -86,7 +195,8 @@ const performanceServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: true,
-    requiresSip: true,
+    // Note: SMS uses 'defaults write' which works without SIP.
+    // The requiresSip flag was incorrectly set — removed.
     // sourceUrl: https://support.apple.com/en-us/HT201666
   },
   {
@@ -129,6 +239,7 @@ const performanceServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: false,
+    requiresSip: true,
     // sourceUrl: https://developer.apple.com/game-center/
   },
   {
@@ -227,6 +338,7 @@ const networkServices: MacService[] = [
     requiresRestart: true,
     requiresAdmin: true,
     requiresSip: true,
+    sipAlternative: BONJOUR_ALT,
     // sourceUrl: https://developer.apple.com/bonjour/
   },
   {
@@ -249,6 +361,7 @@ const networkServices: MacService[] = [
     requiresRestart: false,
     requiresAdmin: true,
     requiresSip: true,
+    sipAlternative: LOCATION_ALT,
     // sourceUrl: https://support.apple.com/en-us/HT204690
   },
   {
@@ -291,6 +404,7 @@ const networkServices: MacService[] = [
     requiresRestart: false,
     requiresAdmin: true,
     requiresSip: true,
+    sipAlternative: BLUETOOTH_ALT,
     // sourceUrl: https://developer.apple.com/documentation/corebluetooth
   },
   {
@@ -313,6 +427,7 @@ const networkServices: MacService[] = [
     requiresRestart: false,
     requiresAdmin: true,
     requiresSip: true,
+    sipAlternative: NETBIOS_ALT,
     // sourceUrl: https://support.apple.com/guide/mac-help/connect-mac-shared-computers-servers-mchlp1140/mac
   },
 ];
@@ -551,6 +666,7 @@ const privacyServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: false,
+    requiresSip: true,
     // sourceUrl: https://developer.apple.com/documentation/xcode/diagnosing-issues-using-crash-reports-and-device-logs
   },
   {
@@ -593,6 +709,7 @@ const privacyServices: MacService[] = [
     requiresRestart: false,
     requiresAdmin: true,
     requiresSip: true,
+    sipAlternative: TAILSPIN_ALT,
     // sourceUrl: https://developer.apple.com/documentation/os/logging
   },
 ];
@@ -620,6 +737,7 @@ const syncServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: false,
+    requiresSip: true,
     // sourceUrl: https://support.apple.com/guide/mac-help/store-files-in-icloud-drive-sysp4ee93f4/mac
   },
   {
@@ -642,6 +760,7 @@ const syncServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: false,
+    requiresSip: true,
     // sourceUrl: https://support.apple.com/guide/photos/icloud-photos-pht6d60b4a9/mac
   },
   {
@@ -732,6 +851,7 @@ const miscServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://support.apple.com/en-us/HT201250
   },
   {
@@ -794,6 +914,7 @@ const miscServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://www.cups.org/documentation.html
   },
   {
@@ -916,6 +1037,7 @@ const additionalPerformanceServices: MacService[] = [
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
     requiresAdmin: false,
+    sipAlternative: SIRI_ALT,
     // sourceUrl: https://support.apple.com/guide/mac-help/use-siri-on-mac-mchl6b029310/mac
   },
   {
@@ -937,8 +1059,10 @@ const additionalPerformanceServices: MacService[] = [
       'Writing Tools, notification summaries, Smart Reply, and other Apple Intelligence ' +
       'features will not function.',
     defaultState: ServiceState.Enabled,
-    requiresRestart: false,
+    requiresRestart: true,
     requiresAdmin: false,
+    requiresSip: true,
+    sipAlternative: APPLE_INTEL_ALT,
     // sourceUrl: https://support.apple.com/apple-intelligence
   },
   {
@@ -960,8 +1084,10 @@ const additionalPerformanceServices: MacService[] = [
       'Live Text, Visual Look Up, scene recognition, and Core ML powered system features ' +
       'will not function.',
     defaultState: ServiceState.Enabled,
-    requiresRestart: false,
+    requiresRestart: true,
     requiresAdmin: false,
+    requiresSip: true,
+    sipAlternative: APPLE_INTEL_ALT,
     // sourceUrl: https://developer.apple.com/documentation/coreml
   },
   {
@@ -983,7 +1109,8 @@ const additionalPerformanceServices: MacService[] = [
       'Apple will not be able to run feature experiments or A/B tests on your Mac.',
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
-    requiresAdmin: false,
+    requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://discussions.apple.com/thread/253791395
   },
   {
@@ -1006,7 +1133,8 @@ const additionalPerformanceServices: MacService[] = [
       'will be less accurate.',
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
-    requiresAdmin: false,
+    requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://discussions.apple.com/thread/253791395
   },
   {

@@ -75,12 +75,26 @@ export class ServiceCard extends Component {
       <div class="service-card-body">
         <div class="service-card-meta">
           <span class="service-card-category">${service.category}</span>
-          ${service.requiresSip === true ? `
+          ${service.requiresSip === true && store.get('sipActive') && service.sipAlternative === undefined ? `
             <span class="badge badge-sip" title="Requires SIP disabled — boot into Recovery Mode and run 'csrutil disable' to manage this service">
               <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                 <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11zM7.25 5v4.5h1.5V5h-1.5zm0 5.5V12h1.5v-1.5h-1.5z"/>
               </svg>
-              SIP Protected
+              SIP Locked
+            </span>` : ''}
+          ${service.requiresSip === true && store.get('sipActive') && service.sipAlternative !== undefined ? `
+            <span class="badge badge-sip-alt" title="${service.sipAlternative.mechanism}">
+              <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11zM7.25 5v4.5h1.5V5h-1.5zm0 5.5V12h1.5v-1.5h-1.5z"/>
+              </svg>
+              SIP Alternative
+            </span>` : ''}
+          ${service.requiresSip === true && !store.get('sipActive') ? `
+            <span class="badge badge-safe" title="SIP is disabled — you can fully manage this service">
+              <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11zM7.25 5v4.5h1.5V5h-1.5zm0 5.5V12h1.5v-1.5h-1.5z"/>
+              </svg>
+              SIP Unlocked
             </span>` : ''}
           ${service.requiresAdmin ? '<span class="badge badge-moderate" title="Requires admin">Admin</span>' : ''}
           ${service.requiresRestart ? '<span class="badge badge-moderate" title="Requires restart">Restart</span>' : ''}
@@ -159,13 +173,18 @@ export class ServiceCard extends Component {
       ? pending === ChangeAction.Enable
       : isEnabled;
 
+    // Only lock toggle if SIP is active, service is SIP-protected, and has no alternative command
+    const isSipLocked = store.get('sipActive') && service.requiresSip === true && service.sipAlternative === undefined;
     this.toggle = new Toggle({
       checked: toggleChecked,
+      disabled: isSipLocked,
       label: `Toggle ${service.name}`,
-      onChange: (checked) => {
-        const action = checked ? ChangeAction.Enable : ChangeAction.Disable;
-        store.togglePendingChange(service.id, action);
-      },
+      onChange: isSipLocked
+        ? () => { /* no-op: SIP protected with no alternative */ }
+        : (checked) => {
+            const action = checked ? ChangeAction.Enable : ChangeAction.Disable;
+            store.togglePendingChange(service.id, action);
+          },
     });
     this.toggle.mount(togglePlaceholder);
   }

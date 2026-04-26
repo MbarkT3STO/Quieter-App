@@ -8,7 +8,7 @@ import { store } from '../core/Store.js';
 import { eventBus } from '../core/EventBus.js';
 import { showToast } from '../components/Toast.js';
 import { themeManager } from '../core/ThemeManager.js';
-import type { AppSettings } from '../../shared/types.js';
+import type { AppSettings, HistoryEntry } from '../../shared/types.js';
 import { ChangeAction, CpuMethod } from '../../shared/types.js';
 import { APP_NAME, APP_VERSION, GITHUB_URL } from '../../shared/constants.js';
 
@@ -17,6 +17,7 @@ type ThemeSetting = AppSettings['theme'];
 export class SettingsView extends Component {
   private loginToggle: Toggle | null = null;
   private autoCheckToggle: Toggle | null = null;
+  private enforcerToggle: Toggle | null = null;
 
   constructor() {
     super('div', 'settings-view');
@@ -187,6 +188,37 @@ export class SettingsView extends Component {
         </div>
       </div>
 
+      <!-- Persistent Enforcer -->
+      <div class="settings-section">
+        <div class="settings-section-header">
+          <div class="settings-section-title">Persistent Enforcer</div>
+          <div class="settings-section-desc">Automatically re-disables your managed services after every restart. When enabled, Quieter runs silently at login for ~1 second to enforce your choices.</div>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Enforce disabled services on login</div>
+            <div class="settings-row-desc">Recommended for services that auto-restart</div>
+          </div>
+          <div id="toggle-enforcer"></div>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="settings-section">
+        <div class="settings-section-header">
+          <div class="settings-section-title">History</div>
+          <div class="settings-section-desc">Log of all applied service changes</div>
+        </div>
+
+        <div class="settings-row" style="align-items: flex-start; flex-direction: column; gap: var(--space-3);">
+          <div id="history-list" style="width: 100%; max-height: 320px; overflow-y: auto;"></div>
+          <button class="btn btn-ghost" id="btn-clear-history" aria-label="Clear history">
+            Clear History
+          </button>
+        </div>
+      </div>
+
       <div class="settings-section">
         <div class="settings-section-header">
           <div class="settings-section-title">Backup & Restore</div>
@@ -270,6 +302,35 @@ export class SettingsView extends Component {
 
   protected onMount(): void {
     this.bindActions();
+
+    // Load enforcer state and mount toggle
+    void window.peakMacAPI.getEnforcerMode().then((result) => {
+      if (!result.success) return;
+      const enforcerContainer = this.queryOptional<HTMLElement>('#toggle-enforcer');
+      if (enforcerContainer === null) return;
+      this.enforcerToggle = new Toggle({
+        checked: result.data,
+        label: 'Enforce disabled services on login',
+        onChange: (checked) => {
+          void window.peakMacAPI.setEnforcerMode(checked).then((r) => {
+            if (r.success) {
+              showToast(
+                'success',
+                checked
+                  ? 'Persistent Enforcer enabled — services will be re-disabled after each restart'
+                  : 'Persistent Enforcer disabled',
+              );
+            } else {
+              showToast('error', 'Failed to update Persistent Enforcer');
+            }
+          });
+        },
+      });
+      this.enforcerToggle.mount(enforcerContainer);
+    });
+
+    // Load history
+    void this.loadHistory();
   }
 
   private bindActions(): void {
@@ -336,6 +397,12 @@ export class SettingsView extends Component {
     const enableAllBtn = this.queryOptional<HTMLButtonElement>('#btn-enable-all');
     enableAllBtn?.addEventListener('click', () => {
       this.handleEnableAll();
+    });
+
+    // Clear history button
+    const clearHistoryBtn = this.queryOptional<HTMLButtonElement>('#btn-clear-history');
+    clearHistoryBtn?.addEventListener('click', () => {
+      void this.handleClearHistory();
     });
   }
 
@@ -410,5 +477,72 @@ export class SettingsView extends Component {
     });
 
     showToast('info', `Marked ${services.length} services for enabling. Click Apply Changes to proceed.`);
+  }
+
+  protected onUnmount(): void {
+    this.enforcerToggle?.unmount();
+    this.enforcerToggle = null;
+    this.loginToggle?.unmount();
+    this.loginToggle = null;
+    this.autoCheckToggle?.unmount();
+    this.autoCheckToggle = null;
+  }
+
+  private async loadHistory(): Promise<void> {
+    const listEl = this.queryOptional<HTMLElement>('#history-list');
+    if (listEl === null) return;
+
+    const result = await window.peakMacAPI.getHistory();
+    if (!result.success) {
+      listEl.innerHTML = `<p class="text-muted text-sm" style="padding: 8px 0;">Failed to load history.</p>`;
+      return;
+    }
+
+    this.renderHistoryList(result.data, listEl);
+  }
+
+  private renderHistoryList(entries: HistoryEntry[], listEl: HTMLElement): void {
+    if (entries.length === 0) {
+      listEl.innerHTML = `<p class="text-muted text-sm" style="padding: 8px 0;">No history yet.</p>`;
+      return;
+    }
+
+    listEl.innerHTML = entries.map((entry) => {
+      const date = new Date(entry.timestamp);
+      const formatted = date.toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const actionIcon = entry.action === ChangeAction.Disable ? '↓' : '↑';
+      const pillClass = entry.success ? 'history-pill--success' : 'history-pill--error';
+      const pillLabel = entry.success ? 'OK' : 'Failed';
+      const errorAttr = !entry.success && entry.error !== undefined
+        ? ` title="${entry.error.replace(/"/g, '&quot;')}"`
+        : '';
+
+      return `
+        <div class="history-row" style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06)); font-size: 12px;">
+          <span class="text-muted" style="min-width: 110px; flex-shrink: 0;">${formatted}</span>
+          <span class="history-action-icon" aria-label="${entry.action}" style="font-weight: 600; min-width: 16px;">${actionIcon}</span>
+          <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${entry.serviceName}</span>
+          <span class="history-pill ${pillClass}"${errorAttr} style="flex-shrink: 0; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600;">${pillLabel}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  private async handleClearHistory(): Promise<void> {
+    const result = await window.peakMacAPI.clearHistory();
+    if (result.success) {
+      const listEl = this.queryOptional<HTMLElement>('#history-list');
+      if (listEl !== null) {
+        this.renderHistoryList([], listEl);
+      }
+      showToast('success', 'History cleared');
+    } else {
+      showToast('error', 'Failed to clear history');
+    }
   }
 }

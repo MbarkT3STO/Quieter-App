@@ -12,7 +12,6 @@ import type {
   AppSettings,
   ApplyProgress,
 } from '../shared/types.js';
-
 const api: PeakMacAPI = {
   getServices() {
     return ipcRenderer.invoke(IPC_CHANNELS.GET_SERVICES);
@@ -60,6 +59,22 @@ const api: PeakMacAPI = {
 
   getEnforcerMode() {
     return ipcRenderer.invoke(IPC_CHANNELS.GET_ENFORCER_MODE);
+  },
+
+  getHistory() {
+    return ipcRenderer.invoke(IPC_CHANNELS.GET_HISTORY);
+  },
+
+  clearHistory() {
+    return ipcRenderer.invoke(IPC_CHANNELS.CLEAR_HISTORY);
+  },
+
+  hasIntent() {
+    return ipcRenderer.invoke(IPC_CHANNELS.HAS_INTENT);
+  },
+  
+  getSipStatus() {
+    return ipcRenderer.invoke(IPC_CHANNELS.GET_SIP_STATUS);
   },
 
   onApplyProgress(cb: (progress: ApplyProgress) => void) {

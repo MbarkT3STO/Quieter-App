@@ -52,6 +52,7 @@ export async function safeExec(
   command: string,
   args: string[],
   context: string,
+  ignoreExitCodes: string[] = [],
 ): Promise<Result<ShellResult>> {
   // Sanitize each argument
   for (const arg of args) {
@@ -107,8 +108,8 @@ export async function safeExec(
       exitCode === 1 &&
       stderr.includes('does not exist');
 
-    if (isExpectedMissing) {
-      logger.debug(context, `defaults key not set (using system default)`, { command, args });
+    if (isExpectedMissing || ignoreExitCodes.includes(String(exitCode))) {
+      logger.debug(context, `Command result (ignored exit code ${exitCode})`, { command, args });
     } else {
       logger.error(context, `Command failed (exit ${exitCode})`, {
         command,

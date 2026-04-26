@@ -164,7 +164,19 @@ export class ApplyBar extends Component {
 
       store.clearPendingChanges();
       eventBus.emit('apply:done', applyResult);
-      showToast('success', `Applied ${applyResult.applied} change${applyResult.applied !== 1 ? 's' : ''} successfully`);
+
+      if (
+        applyResult.verificationMismatches !== undefined &&
+        applyResult.verificationMismatches.length > 0
+      ) {
+        showToast(
+          'warning',
+          `Applied ${applyResult.applied} change${applyResult.applied !== 1 ? 's' : ''}. Note: ${applyResult.verificationMismatches.length} service(s) may not have changed — they could be SIP-protected or require admin.`,
+          6000,
+        );
+      } else {
+        showToast('success', `Applied ${applyResult.applied} change${applyResult.applied !== 1 ? 's' : ''} successfully`);
+      }
 
       // Refresh service states
       const servicesResult = await window.peakMacAPI.getServices();

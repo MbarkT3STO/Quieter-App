@@ -1,7 +1,8 @@
 /**
  * LaunchctlService — wraps launchctl CLI commands for managing launchd services.
- * Uses 'launchctl bootout' / 'launchctl bootstrap' for macOS 10.11+ (El Capitan+).
- * Falls back to 'launchctl unload' / 'launchctl load' for compatibility.
+ * Uses 'launchctl disable' + 'launchctl bootout' for persistent disable (survives reboots).
+ * Uses 'launchctl enable' + 'launchctl bootstrap' for persistent enable.
+ * Domain is derived from the plist path location, not from requiresAdmin.
  */
 
 import fs from 'fs';
@@ -13,6 +14,11 @@ import { ServiceState } from '../../shared/types.js';
 
 const LAUNCHCTL = '/bin/launchctl';
 const CONTEXT = 'LaunchctlService';
+
+interface PlistInfo {
+  path: string;
+  domain: string; // 'system' | 'gui/501'
+}
 
 export class LaunchctlService {
   private static instance: LaunchctlService;
@@ -28,8 +34,30 @@ export class LaunchctlService {
   }
 
   /**
+   * Resolve the plist file path and domain for a given bundle ID.
+   * Domain is derived from WHERE the plist lives on disk:
+   *   /LaunchDaemons/ → domain = 'system'
+   *   /LaunchAgents/  → domain = 'gui/{uid}'
+   */
+  private resolvePlist(bundleId: string): PlistInfo | null {
+    const uid = process.getuid?.() ?? 501;
+    const candidates: PlistInfo[] = [
+      { path: `/System/Library/LaunchDaemons/${bundleId}.plist`, domain: 'system' },
+      { path: `/Library/LaunchDaemons/${bundleId}.plist`,        domain: 'system' },
+      { path: `/System/Library/LaunchAgents/${bundleId}.plist`,  domain: `gui/${uid}` },
+      { path: `/Library/LaunchAgents/${bundleId}.plist`,         domain: `gui/${uid}` },
+      { path: `${os.homedir()}/Library/LaunchAgents/${bundleId}.plist`, domain: `gui/${uid}` },
+    ];
+
+    for (const c of candidates) {
+      if (fs.existsSync(c.path)) return c;
+    }
+    return null;
+  }
+
+  /**
    * Get the current state of a launchd service by its bundle ID.
-   * Parses 'launchctl list' output to determine if the service is running.
+   * Uses print-disabled for accurate persistent state detection.
    *
    * @param bundleId - e.g. "com.apple.metadata.mds"
    */
@@ -51,8 +79,43 @@ export class LaunchctlService {
   }
 
   /**
-   * Check multiple services at once by parsing 'launchctl list' output.
-   * More efficient than calling getServiceState for each service individually.
+   * Read the persistent disabled registry via 'launchctl print-disabled'.
+   * Returns a map of bundleId → true (disabled) / false (enabled).
+   */
+  private async readPersistentDisabledMap(): Promise<Map<string, boolean>> {
+    const uid = process.getuid?.() ?? 501;
+    const result = new Map<string, boolean>();
+
+    // Read user-domain disabled registry
+    const guiResult = await safeExecOutput(LAUNCHCTL, ['print-disabled', `gui/${uid}`], CONTEXT);
+    if (guiResult.success) this.parsePrintDisabled(guiResult.data, result);
+
+    // Read system-domain disabled registry (may fail without root — that's OK)
+    const sysResult = await safeExecOutput(LAUNCHCTL, ['print-disabled', 'system'], CONTEXT);
+    if (sysResult.success) this.parsePrintDisabled(sysResult.data, result);
+
+    return result;
+  }
+
+  /**
+   * Parse 'launchctl print-disabled' output into a map.
+   * Each line looks like:  "com.apple.gamed" => true
+   */
+  private parsePrintDisabled(output: string, map: Map<string, boolean>): void {
+    const linePattern = /"([^"]+)"\s*=>\s*(true|false)/g;
+    let match: RegExpExecArray | null;
+    while ((match = linePattern.exec(output)) !== null) {
+      const bundleId = match[1];
+      const value = match[2];
+      if (bundleId !== undefined && value !== undefined) {
+        map.set(bundleId, value === 'true');
+      }
+    }
+  }
+
+  /**
+   * Check multiple services at once using both print-disabled and launchctl list.
+   * print-disabled gives accurate persistent state; list gives currently-running state.
    *
    * @param bundleIds - Array of bundle IDs to check
    * @returns Map of bundleId -> ServiceState
@@ -60,146 +123,156 @@ export class LaunchctlService {
   public async getMultipleServiceStates(
     bundleIds: string[],
   ): Promise<Result<Map<string, ServiceState>>> {
-    const result = await safeExecOutput(LAUNCHCTL, ['list'], CONTEXT);
+    // Source 1: persistent disabled registry (survives reboots)
+    const disabledMap = await this.readPersistentDisabledMap();
 
-    if (!result.success) {
-      return result;
-    }
+    // Source 2: currently running services
+    const listResult = await safeExecOutput(LAUNCHCTL, ['list'], CONTEXT);
+    const runningOutput = listResult.success ? listResult.data : '';
 
-    const output = result.data;
     const stateMap = new Map<string, ServiceState>();
 
     for (const bundleId of bundleIds) {
-      const isRunning = output.includes(bundleId);
-      stateMap.set(bundleId, isRunning ? ServiceState.Enabled : ServiceState.Disabled);
+      if (disabledMap.get(bundleId) === true) {
+        stateMap.set(bundleId, ServiceState.Disabled);        // explicitly disabled
+      } else if (runningOutput.includes(bundleId)) {
+        stateMap.set(bundleId, ServiceState.Enabled);         // running right now
+      } else {
+        stateMap.set(bundleId, ServiceState.Enabled);         // not disabled, on-demand
+      }
     }
 
     return { success: true, data: stateMap };
   }
 
   /**
-   * Disable (unload) a launchd service.
-   * Uses 'launchctl bootout' for macOS 10.11+ or falls back to 'launchctl unload'.
+   * Disable a launchd service persistently.
+   *
+   * Step 1 — persist (survives reboots):
+   *   launchctl disable {domain}/{bundleId}
+   *   Log result but do NOT return early if this fails — attempt Step 2 anyway.
+   *
+   * Step 2 — stop now (current session):
+   *   launchctl bootout {domain}/{bundleId}
+   *   Exit code 113 = "not loaded" = acceptable, treat as success.
+   *   Any other non-zero exit = log warning but do NOT fail the whole operation
+   *   because the disable in Step 1 already made it persistent.
+   *
+   * Returns success if Step 1 succeeded. Step 2 is best-effort.
    *
    * @param bundleId - The launchd bundle ID to disable
-   * @param requiresAdmin - Whether this service requires elevated privileges
    */
-  public async disableService(bundleId: string, requiresAdmin: boolean): Promise<Result<void>> {
-    logger.info(CONTEXT, `Disabling service: ${bundleId}`, { requiresAdmin });
+  public async disableService(bundleId: string): Promise<Result<void>> {
+    logger.info(CONTEXT, `Disabling service: ${bundleId}`);
 
-    // Try bootout first (macOS 10.11+)
-    const uid = process.getuid !== undefined ? process.getuid() : 501;
-    const domain = requiresAdmin ? 'system' : `gui/${uid}`;
+    const uid = process.getuid?.() ?? 501;
+    const plistInfo = this.resolvePlist(bundleId);
+    const domain = plistInfo !== null ? plistInfo.domain : `gui/${uid}`;
 
+    // Step 1 — persist: launchctl disable {domain}/{bundleId}
+    const disableResult = await safeExec(
+      LAUNCHCTL,
+      ['disable', `${domain}/${bundleId}`],
+      CONTEXT,
+    );
+
+    if (!disableResult.success) {
+      logger.warn(CONTEXT, `disable step failed for ${bundleId}`, { error: disableResult.error });
+    } else {
+      logger.info(CONTEXT, `disable step succeeded for ${bundleId}`);
+    }
+
+    // Step 2 — stop now (best-effort): launchctl bootout {domain}/{bundleId}
     const bootoutResult = await safeExec(
       LAUNCHCTL,
       ['bootout', `${domain}/${bundleId}`],
       CONTEXT,
+      ['3', '113'], // Ignore 3 (No such process) and 113 (Not loaded)
     );
 
-    if (bootoutResult.success) {
-      logger.info(CONTEXT, `Successfully disabled ${bundleId} via bootout`);
-      return { success: true, data: undefined };
-    }
-
-    // Fall back to unload
-    const plistPath = this.resolvePlistPath(bundleId, requiresAdmin);
-    if (plistPath !== null) {
-      const unloadResult = await safeExec(LAUNCHCTL, ['unload', '-w', plistPath], CONTEXT);
-      if (unloadResult.success) {
-        logger.info(CONTEXT, `Successfully disabled ${bundleId} via unload`);
-        return { success: true, data: undefined };
+    if (!bootoutResult.success) {
+      // Exit code 113 = "not loaded" = acceptable
+      if (bootoutResult.code === '113' || bootoutResult.error.includes('No such process')) {
+        logger.info(CONTEXT, `bootout: ${bundleId} was not loaded (acceptable)`);
+      } else {
+        logger.warn(CONTEXT, `bootout step failed for ${bundleId} (non-fatal, disable persisted)`, {
+          error: bootoutResult.error,
+        });
       }
+    } else {
+      logger.info(CONTEXT, `bootout step succeeded for ${bundleId}`);
     }
 
-    // Try disable subcommand as last resort
-    const disableResult = await safeExec(LAUNCHCTL, ['disable', `${domain}/${bundleId}`], CONTEXT);
+    // Return success if Step 1 succeeded; Step 2 is best-effort
     if (disableResult.success) {
-      logger.info(CONTEXT, `Successfully disabled ${bundleId} via disable`);
       return { success: true, data: undefined };
     }
 
     return {
       success: false,
-      error: `Failed to disable service ${bundleId}: ${bootoutResult.error}`,
+      error: `Failed to disable service ${bundleId}: ${disableResult.error}`,
       code: 'LAUNCHCTL_DISABLE_FAILED',
     };
   }
 
   /**
-   * Enable (load) a launchd service.
-   * Uses 'launchctl bootstrap' for macOS 10.11+ or falls back to 'launchctl load'.
+   * Enable a launchd service persistently.
+   *
+   * Step 1 — un-persist:
+   *   launchctl enable {domain}/{bundleId}
+   *
+   * Step 2 — start now:
+   *   Resolve plist path. If found: launchctl bootstrap {domain} {plistPath}
+   *   If plist not found, skip Step 2 (service will load on next login).
+   *
+   * Returns success if Step 1 succeeded.
    *
    * @param bundleId - The launchd bundle ID to enable
-   * @param requiresAdmin - Whether this service requires elevated privileges
    */
-  public async enableService(bundleId: string, requiresAdmin: boolean): Promise<Result<void>> {
-    logger.info(CONTEXT, `Enabling service: ${bundleId}`, { requiresAdmin });
+  public async enableService(bundleId: string): Promise<Result<void>> {
+    logger.info(CONTEXT, `Enabling service: ${bundleId}`);
 
-    const uid = process.getuid !== undefined ? process.getuid() : 501;
-    const domain = requiresAdmin ? 'system' : `gui/${uid}`;
+    const uid = process.getuid?.() ?? 501;
+    const plistInfo = this.resolvePlist(bundleId);
+    const domain = plistInfo !== null ? plistInfo.domain : `gui/${uid}`;
 
-    // Try enable + bootstrap
+    // Step 1 — un-persist: launchctl enable {domain}/{bundleId}
     const enableResult = await safeExec(
       LAUNCHCTL,
       ['enable', `${domain}/${bundleId}`],
       CONTEXT,
     );
 
-    if (enableResult.success) {
-      const plistPath = this.resolvePlistPath(bundleId, requiresAdmin);
-      if (plistPath !== null) {
-        const bootstrapResult = await safeExec(
-          LAUNCHCTL,
-          ['bootstrap', domain, plistPath],
-          CONTEXT,
-        );
-        if (bootstrapResult.success) {
-          logger.info(CONTEXT, `Successfully enabled ${bundleId} via bootstrap`);
-          return { success: true, data: undefined };
-        }
-      }
+    if (!enableResult.success) {
+      logger.warn(CONTEXT, `enable step failed for ${bundleId}`, { error: enableResult.error });
+      return {
+        success: false,
+        error: `Failed to enable service ${bundleId}: ${enableResult.error}`,
+        code: 'LAUNCHCTL_ENABLE_FAILED',
+      };
     }
 
-    // Fall back to load
-    const plistPath = this.resolvePlistPath(bundleId, requiresAdmin);
-    if (plistPath !== null) {
-      const loadResult = await safeExec(LAUNCHCTL, ['load', '-w', plistPath], CONTEXT);
-      if (loadResult.success) {
-        logger.info(CONTEXT, `Successfully enabled ${bundleId} via load`);
-        return { success: true, data: undefined };
+    logger.info(CONTEXT, `enable step succeeded for ${bundleId}`);
+
+    // Step 2 — start now (best-effort): launchctl bootstrap {domain} {plistPath}
+    if (plistInfo !== null) {
+      const bootstrapResult = await safeExec(
+        LAUNCHCTL,
+        ['bootstrap', domain, plistInfo.path],
+        CONTEXT,
+      );
+
+      if (!bootstrapResult.success) {
+        logger.warn(CONTEXT, `bootstrap step failed for ${bundleId} (non-fatal, enable persisted)`, {
+          error: bootstrapResult.error,
+        });
+      } else {
+        logger.info(CONTEXT, `bootstrap step succeeded for ${bundleId}`);
       }
+    } else {
+      logger.info(CONTEXT, `No plist found for ${bundleId} — service will load on next login`);
     }
 
-    return {
-      success: false,
-      error: `Failed to enable service ${bundleId}`,
-      code: 'LAUNCHCTL_ENABLE_FAILED',
-    };
-  }
-
-  /**
-   * Resolve the plist file path for a given bundle ID.
-   * Checks standard launchd plist locations.
-   */
-  private resolvePlistPath(bundleId: string, requiresAdmin: boolean): string | null {
-    const systemPaths = [
-      `/System/Library/LaunchDaemons/${bundleId}.plist`,
-      `/Library/LaunchDaemons/${bundleId}.plist`,
-    ];
-    const userPaths = [
-      `/System/Library/LaunchAgents/${bundleId}.plist`,
-      `/Library/LaunchAgents/${bundleId}.plist`,
-      `${os.homedir()}/Library/LaunchAgents/${bundleId}.plist`,
-    ];
-
-    const paths = requiresAdmin ? [...systemPaths, ...userPaths] : [...userPaths, ...systemPaths];
-
-    for (const p of paths) {
-      if (fs.existsSync(p)) {
-        return p;
-      }
-    }
-    return null;
+    return { success: true, data: undefined };
   }
 }

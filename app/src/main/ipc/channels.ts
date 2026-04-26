@@ -30,6 +30,14 @@ export const IPC_CHANNELS = {
   SET_ENFORCER_MODE: 'peakmac:set-enforcer-mode',
   /** Get current Persistent Enforcer state */
   GET_ENFORCER_MODE: 'peakmac:get-enforcer-mode',
+  /** Get change history log */
+  GET_HISTORY: 'peakmac:get-history',
+  /** Clear change history log */
+  CLEAR_HISTORY: 'peakmac:clear-history',
+  /** Check if intent file exists */
+  HAS_INTENT: 'peakmac:has-intent',
+  /** Get System Integrity Protection (SIP) status */
+  GET_SIP_STATUS: 'peakmac:get-sip-status',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

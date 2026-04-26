@@ -11,6 +11,12 @@ export const DATA_DIR_NAME = '.quieter';
 /** Backup snapshot filename */
 export const BACKUP_FILENAME = 'backup.json';
 
+/** Intent filename — records the user's last successfully applied service states */
+export const INTENT_FILENAME = 'intent.json';
+
+/** History filename — rolling log of applied changes */
+export const HISTORY_FILENAME = 'history.json';
+
 /** Log directory name */
 export const LOG_DIR_NAME = 'logs';
 
