@@ -3,7 +3,7 @@
  * Single source of truth for all UI state.
  */
 
-import type { AppState, ServiceWithState, SystemStats, AppSettings, ApplyProgress } from '../../shared/types.js';
+import type { AppState, ServiceWithState, SystemStats, AppSettings, ApplyProgress, TweakWithState } from '../../shared/types.js';
 import { ChangeAction, ServiceCategory, ServiceState } from '../../shared/types.js';
 import { DEFAULT_SETTINGS } from '../../shared/constants.js';
 import { eventBus } from './EventBus.js';
@@ -15,7 +15,9 @@ class Store {
 
   private state: AppState = {
     services: [],
+    tweaks: [],
     pendingChanges: new Map(),
+    pendingTweaks: new Map(),
     systemStats: null,
     isLoading: false,
     isApplying: false,
@@ -110,9 +112,20 @@ class Store {
     eventBus.emit('pending:changed', pending);
   }
 
+  public setPendingTweak(id: string, shouldApply: boolean | null): void {
+    const pending = new Map(this.state.pendingTweaks);
+    if (shouldApply === null) {
+      pending.delete(id);
+    } else {
+      pending.set(id, shouldApply);
+    }
+    this.set('pendingTweaks', pending);
+  }
+
   /** Clear all pending changes */
-  public clearPendingChanges(): void {
+  public commitChanges(): void {
     this.set('pendingChanges', new Map());
+    this.set('pendingTweaks', new Map());
     eventBus.emit('pending:changed', new Map());
   }
 
@@ -120,6 +133,11 @@ class Store {
   public setServices(services: ServiceWithState[]): void {
     this.set('services', services);
     eventBus.emit('services:loaded');
+  }
+
+  /** Update tweaks list */
+  public setTweaks(tweaks: TweakWithState[]): void {
+    this.set('tweaks', tweaks);
   }
 
   /** Update system stats */

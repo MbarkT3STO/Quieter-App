@@ -12,6 +12,7 @@ type ViewFactory = () => Component;
 const ROUTE_TITLES: Record<string, string> = {
   '#/dashboard': 'Dashboard',
   '#/services': 'All Services',
+  '#/toolkit': 'System Toolkit',
   '#/settings': 'Settings',
   '#/category/Performance': 'Performance',
   '#/category/Network': 'Network',

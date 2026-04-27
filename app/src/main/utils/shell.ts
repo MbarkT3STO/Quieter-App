@@ -6,7 +6,7 @@
  * - Logs every command in structured format
  */
 
-import { execFile } from 'child_process';
+import { execFile, exec } from 'child_process';
 import { promisify } from 'util';
 import { SHELL_TIMEOUT_MS } from '../../shared/constants.js';
 import type { Result } from '../../shared/types.js';
@@ -139,4 +139,39 @@ export async function safeExecOutput(
   const result = await safeExec(command, args, context);
   if (!result.success) return result;
   return { success: true, data: result.data.stdout };
+}
+
+/**
+ * Executes a command with administrator privileges via osascript.
+ * This will trigger a macOS system password prompt.
+ */
+export async function sudoExec(
+  command: string,
+  args: string[],
+  context: string,
+): Promise<Result<ShellResult>> {
+  // Combine command and args into a single string for shell
+  const fullCommand = [command, ...args].map(a => "'" + a.replace(/'/g, "'\\''") + "'").join(' ');
+  
+  // Prepare osascript. Use double quotes for the inner shell script.
+  const osaScript = `do shell script "${fullCommand.replace(/"/g, '\\"')}" with administrator privileges`;
+
+  logger.info(context, `Requesting sudo for: ${command}`, { args });
+
+  return new Promise((resolve) => {
+    exec(`/usr/bin/osascript -e '${osaScript}'`, (error, stdout, stderr) => {
+      const exitCode = error ? (error.code || 1) : 0;
+      
+      if (exitCode === 0) {
+        resolve({ success: true, data: { stdout, stderr, exitCode: 0 } });
+      } else {
+        logger.error(context, `Sudo command failed (exit ${exitCode})`, { command, stderr });
+        resolve({ 
+          success: false, 
+          error: stderr || 'Sudo execution failed or was cancelled', 
+          code: String(exitCode) 
+        });
+      }
+    });
+  });
 }

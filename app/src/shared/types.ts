@@ -13,6 +13,13 @@ export enum ServiceCategory {
   Sync = 'Sync',
   Misc = 'Misc',
 }
+/** Categories for system tweaks/tools */
+export enum TweakCategory {
+  Visuals = 'Visuals',
+  Maintenance = 'Maintenance',
+  Network = 'Network',
+  Power = 'Power',
+}
 
 export enum RiskLevel {
   Safe = 'safe',
@@ -37,6 +44,34 @@ export enum ServiceState {
   Enabled = 'enabled',
   Disabled = 'disabled',
   Unknown = 'unknown',
+}
+
+/** Represents a one-off action or a system preference tweak */
+export interface SystemTweak {
+  id: string;
+  name: string;
+  description: string;
+  category: TweakCategory;
+  /** Command to apply the tweak (enable the optimization) */
+  applyCmd: string;
+  applyArgs: string[];
+  /** Command to revert the tweak (restore default behavior) */
+  revertCmd: string;
+  revertArgs: string[];
+  /** Command to check current state */
+  stateCmd: string;
+  stateArgs: string[];
+  /** Value to look for in stateCmd output to consider it 'applied' */
+  appliedValue: string;
+  /** Whether the tweak needs a relaunch of a process (e.g. killall Dock) */
+  relaunchProcess?: string;
+  /** Tooltip explanation of what actually happens */
+  mechanism: string;
+  requiresAdmin: boolean;
+}
+
+export interface TweakWithState extends SystemTweak {
+  isApplied: boolean;
 }
 
 export enum ChangeAction {
@@ -240,8 +275,14 @@ export interface PeakMacAPI {
   clearHistory(): Promise<Result<void>>;
   /** Check if intent file exists (enforcer has data to work with) */
   hasIntent(): Promise<Result<boolean>>;
-  /** Get current System Integrity Protection (SIP) status */
+  /** Get System Integrity Protection (SIP) status */
   getSipStatus(): Promise<Result<boolean>>;
+  /** Fetch all available system tweaks */
+  getTweaks(): Promise<Result<TweakWithState[]>>;
+  /** Apply a batch of tweaks */
+  applyTweaks(tweakIds: string[], shouldApply: boolean): Promise<Result<void>>;
+  /** Run a one-off maintenance action (like RAM purge) */
+  runAction(actionId: string): Promise<Result<string>>;
 }
 
 // ─── Composite Types ──────────────────────────────────────────────────────────
@@ -294,7 +335,9 @@ export interface SystemReport {
 
 export interface AppState {
   services: ServiceWithState[];
+  tweaks: TweakWithState[];
   pendingChanges: Map<string, ChangeAction>;
+  pendingTweaks: Map<string, boolean>; // id -> shouldApply
   systemStats: SystemStats | null;
   isLoading: boolean;
   isApplying: boolean;

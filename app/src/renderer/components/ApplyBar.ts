@@ -53,15 +53,21 @@ export class ApplyBar extends Component {
     });
 
     revertBtn.addEventListener('click', () => {
-      store.clearPendingChanges();
+      store.commitChanges();
       showToast('info', 'Pending changes cleared');
     });
 
     // Listen for pending changes
-    const pendingUnsub = store.subscribe('pendingChanges', (pending) => {
-      this.updateCount(pending.size);
+    const pendingUnsub = store.subscribe('pendingChanges', () => {
+      this.updateCount();
     });
     this.addCleanup(pendingUnsub);
+
+    // Also listen for pending tweaks so the bar shows when tweaks are staged
+    const pendingTweaksUnsub = store.subscribe('pendingTweaks', () => {
+      this.updateCount();
+    });
+    this.addCleanup(pendingTweaksUnsub);
 
     // Listen for apply progress — only if API is available
     if (typeof window.peakMacAPI !== 'undefined') {
@@ -75,13 +81,22 @@ export class ApplyBar extends Component {
     }
   }
 
-  private updateCount(count: number): void {
+  private updateCount(): void {
+    const pendingServices = store.get('pendingChanges');
+    const pendingTweaks = store.get('pendingTweaks');
+    const serviceCount = pendingServices.size;
+    const tweakCount = pendingTweaks.size;
+    const totalCount = serviceCount + tweakCount;
+
     const countEl = this.queryOptional('#apply-bar-count');
     if (countEl !== null) {
-      countEl.innerHTML = `<strong>${count} change${count !== 1 ? 's' : ''}</strong> pending`;
+      const parts: string[] = [];
+      if (serviceCount > 0) parts.push(`${serviceCount} service${serviceCount !== 1 ? 's' : ''}`);
+      if (tweakCount > 0) parts.push(`${tweakCount} tweak${tweakCount !== 1 ? 's' : ''}`);
+      countEl.innerHTML = `<strong>${parts.join(', ')}</strong> pending`;
     }
 
-    if (count > 0) {
+    if (totalCount > 0) {
       this.element.classList.remove('hidden');
     } else {
       this.element.classList.add('hidden');
@@ -92,7 +107,7 @@ export class ApplyBar extends Component {
     if (this.isApplying) return;
 
     const pending = store.get('pendingChanges');
-    if (pending.size === 0) return;
+    if (pending.size === 0 && store.get('pendingTweaks').size === 0) return;
 
     const services = store.get('services');
 
@@ -135,60 +150,91 @@ export class ApplyBar extends Component {
     this.progressBar.show();
     this.progressBar.setProgress(0, 'Starting…', 'running');
 
-    const changes: ServiceChange[] = Array.from(pending.entries()).map(([serviceId, action]) => ({
-      serviceId,
-      action,
-    }));
-
     eventBus.emit('apply:start');
 
-    const result = await window.peakMacAPI.applyChanges(changes);
+    try {
+      const pendingServices = store.get('pendingChanges');
+      const pendingTweaks = store.get('pendingTweaks');
+      const changes: ServiceChange[] = Array.from(pendingServices.entries()).map(([serviceId, action]) => ({
+        serviceId,
+        action,
+      }));
 
-    this.isApplying = false;
-    store.set('isApplying', false);
+      // Apply services
+      let servicesResult: any = { success: true, applied: 0, failed: 0, rolledBack: false, verificationMismatches: [], errors: [] };
+      if (changes.length > 0) {
+        const result = await window.peakMacAPI.applyChanges(changes);
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+        servicesResult = result.data;
+      }
 
-    if (applyBtn !== null) {
-      applyBtn.disabled = false;
-      applyBtn.textContent = 'Apply Changes';
-    }
-    if (revertBtn !== null) revertBtn.disabled = false;
-    if (countEl !== null) countEl.style.display = '';
+      // Apply tweaks
+      if (pendingTweaks.size > 0) {
+        // Group tweaks by action (apply vs revert)
+        const toApply = Array.from(pendingTweaks.entries()).filter(([_, val]) => val).map(([id]) => id);
+        const toRevert = Array.from(pendingTweaks.entries()).filter(([_, val]) => !val).map(([id]) => id);
 
-    if (result.success) {
-      const applyResult = result.data;
+        if (toApply.length > 0) {
+          const res = await window.peakMacAPI.applyTweaks(toApply, true);
+          if (!res.success) throw new Error(res.error);
+        }
+        if (toRevert.length > 0) {
+          const res = await window.peakMacAPI.applyTweaks(toRevert, false);
+          if (!res.success) throw new Error(res.error);
+        }
+      }
+
+      // Finalize
+      store.commitChanges();
+      
+      // Refresh data
+      const [newServices, newTweaks] = await Promise.all([
+        window.peakMacAPI.getServices(),
+        window.peakMacAPI.getTweaks()
+      ]);
+      
+      if (newServices.success) store.setServices(newServices.data);
+      if (newTweaks.success) store.setTweaks(newTweaks.data);
+
       this.progressBar.setProgress(100, 'Done', 'success');
 
       setTimeout(() => {
         this.progressBar.hide();
       }, 2000);
 
-      store.clearPendingChanges();
-      eventBus.emit('apply:done', applyResult);
+      eventBus.emit('apply:done', servicesResult);
 
       if (
-        applyResult.verificationMismatches !== undefined &&
-        applyResult.verificationMismatches.length > 0
+        servicesResult.verificationMismatches !== undefined &&
+        servicesResult.verificationMismatches.length > 0
       ) {
         showToast(
           'warning',
-          `Applied ${applyResult.applied} change${applyResult.applied !== 1 ? 's' : ''}. Note: ${applyResult.verificationMismatches.length} service(s) may not have changed — they could be SIP-protected or require admin.`,
+          `Applied changes. Note: ${servicesResult.verificationMismatches.length} service(s) may not have changed.`,
           6000,
         );
       } else {
-        showToast('success', `Applied ${applyResult.applied} change${applyResult.applied !== 1 ? 's' : ''} successfully`);
+        showToast('success', `Applied changes successfully`);
       }
-
-      // Refresh service states
-      const servicesResult = await window.peakMacAPI.getServices();
-      if (servicesResult.success) {
-        store.setServices(servicesResult.data);
-      }
-    } else {
+    } catch (err) {
       this.progressBar.setProgress(100, 'Failed', 'error');
       setTimeout(() => this.progressBar.hide(), 3000);
 
-      eventBus.emit('apply:error', result.error ?? 'Unknown error');
-      showToast('error', `Apply failed: ${result.error ?? 'Unknown error'}. Changes rolled back.`);
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      eventBus.emit('apply:error', errorMsg);
+      showToast('error', `Apply failed: ${errorMsg}. Changes rolled back.`);
+    } finally {
+      this.isApplying = false;
+      store.set('isApplying', false);
+
+      if (applyBtn !== null) {
+        applyBtn.disabled = false;
+        applyBtn.textContent = 'Apply Changes';
+      }
+      if (revertBtn !== null) revertBtn.disabled = false;
+      if (countEl !== null) countEl.style.display = '';
     }
   }
 

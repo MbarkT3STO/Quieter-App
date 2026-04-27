@@ -16,6 +16,7 @@ import { DashboardView } from './views/DashboardView.js';
 import { ServicesView } from './views/ServicesView.js';
 import { CategoryView } from './views/CategoryView.js';
 import { SettingsView } from './views/SettingsView.js';
+import { ToolkitView } from './views/ToolkitView.js';
 import { showOnboardingModal } from './components/Modal.js';
 import { themeManager } from './core/ThemeManager.js';
 import { ServiceCategory } from '../shared/types.js';
@@ -87,6 +88,7 @@ async function bootstrap(): Promise<void> {
 
   router.register('#/dashboard', () => new DashboardView());
   router.register('#/services', () => new ServicesView());
+  router.register('#/toolkit', () => new ToolkitView());
   router.register('#/settings', () => new SettingsView());
 
   // Category routes
@@ -120,8 +122,9 @@ async function loadInitialData(): Promise<void> {
 
   try {
     // Load in parallel
-    const [servicesResult, statsResult, settingsResult, backupResult, sipResult] = await Promise.all([
+    const [servicesResult, tweaksResult, statsResult, settingsResult, backupResult, sipResult] = await Promise.all([
       window.peakMacAPI.getServices(),
+      window.peakMacAPI.getTweaks(),
       window.peakMacAPI.getSystemStats(),
       window.peakMacAPI.getSettings(),
       window.peakMacAPI.hasBackup(),
@@ -132,6 +135,10 @@ async function loadInitialData(): Promise<void> {
       store.setServices(servicesResult.data);
     } else {
       eventBus.emit('services:error', servicesResult.error ?? 'Failed to load services');
+    }
+
+    if (tweaksResult.success) {
+      store.setTweaks(tweaksResult.data);
     }
 
     if (statsResult.success) {

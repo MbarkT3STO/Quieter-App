@@ -77,6 +77,18 @@ const api: PeakMacAPI = {
     return ipcRenderer.invoke(IPC_CHANNELS.GET_SIP_STATUS);
   },
 
+  getTweaks() {
+    return ipcRenderer.invoke(IPC_CHANNELS.GET_TWEAKS);
+  },
+
+  applyTweaks(tweakIds: string[], shouldApply: boolean) {
+    return ipcRenderer.invoke(IPC_CHANNELS.APPLY_TWEAKS, { tweakIds, shouldApply });
+  },
+
+  runAction(actionId: string) {
+    return ipcRenderer.invoke(IPC_CHANNELS.RUN_ACTION, actionId);
+  },
+
   onApplyProgress(cb: (progress: ApplyProgress) => void) {
     ipcRenderer.on(IPC_CHANNELS.APPLY_PROGRESS, (_event, progress: ApplyProgress) => {
       cb(progress);

@@ -38,6 +38,12 @@ export const IPC_CHANNELS = {
   HAS_INTENT: 'peakmac:has-intent',
   /** Get System Integrity Protection (SIP) status */
   GET_SIP_STATUS: 'peakmac:get-sip-status',
+  /** Fetch all available system tweaks */
+  GET_TWEAKS: 'peakmac:get-tweaks',
+  /** Apply a batch of system tweaks */
+  APPLY_TWEAKS: 'peakmac:apply-tweaks',
+  /** Run a one-off maintenance action */
+  RUN_ACTION: 'peakmac:run-action',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

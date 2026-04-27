@@ -12,6 +12,7 @@ import { ServiceManager } from '../services/ServiceManager.js';
 import { SystemInfoService } from '../services/SystemInfoService.js';
 import { HistoryService } from '../services/HistoryService.js';
 import { SipService } from '../services/SipService.js';
+import { TweakManager } from '../services/TweakManager.js';
 import { logger } from '../utils/logger.js';
 import type { Result, ServiceChange, AppSettings, SystemReport } from '../../shared/types.js';
 import { CpuMethod } from '../../shared/types.js';
@@ -36,6 +37,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   const dataDir = path.join(os.homedir(), DATA_DIR_NAME);
   const settingsPath = path.join(dataDir, SETTINGS_FILENAME);
   const firstLaunchPath = path.join(dataDir, FIRST_LAUNCH_FILENAME);
+  const tweakManager = TweakManager.getInstance();
 
   // Apply saved CPU method immediately on startup
   const savedSettings = loadSettings(settingsPath);
@@ -275,6 +277,40 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     } catch (err) {
       logger.error(CONTEXT, 'getSipStatus failed', { err });
       return { success: false, error: 'Failed to check SIP status', code: 'GET_SIP_STATUS_FAILED' };
+    }
+  });
+
+  // ─── getTweaks ──────────────────────────────────────────────────────────────
+  ipcMain.handle(IPC_CHANNELS.GET_TWEAKS, async (): Promise<Result<unknown>> => {
+    try {
+      return await tweakManager.getAllTweaksWithState();
+    } catch (err) {
+      logger.error(CONTEXT, 'getTweaks failed', { err });
+      return { success: false, error: 'Failed to load tweaks', code: 'GET_TWEAKS_FAILED' };
+    }
+  });
+
+  // ─── applyTweaks ────────────────────────────────────────────────────────────
+  ipcMain.handle(IPC_CHANNELS.APPLY_TWEAKS, async (_e, { tweakIds, shouldApply }): Promise<Result<void>> => {
+    try {
+      for (const id of tweakIds) {
+        const result = await tweakManager.applyTweak(id, shouldApply);
+        if (!result.success) return result;
+      }
+      return { success: true, data: undefined };
+    } catch (err) {
+      logger.error(CONTEXT, 'applyTweaks failed', { err });
+      return { success: false, error: 'Failed to apply tweaks', code: 'APPLY_TWEAKS_FAILED' };
+    }
+  });
+
+  // ─── runAction ──────────────────────────────────────────────────────────────
+  ipcMain.handle(IPC_CHANNELS.RUN_ACTION, async (_e, actionId: string): Promise<Result<string>> => {
+    try {
+      return await tweakManager.runAction(actionId);
+    } catch (err) {
+      logger.error(CONTEXT, 'runAction failed', { err });
+      return { success: false, error: 'Failed to run action', code: 'RUN_ACTION_FAILED' };
     }
   });
 
