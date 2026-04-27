@@ -74,7 +74,7 @@ export const TWEAK_REGISTRY: SystemTweak[] = [
     name: 'Purge Memory (RAM)',
     description: 'Forces macOS to flush inactive memory and file system caches.',
     category: TweakCategory.Maintenance,
-    applyCmd: '/usr/bin/purge',
+    applyCmd: '/usr/sbin/purge',
     applyArgs: [],
     revertCmd: '', // One-off action
     revertArgs: [],
