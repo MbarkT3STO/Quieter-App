@@ -472,11 +472,15 @@ export class SettingsView extends Component {
   private handleEnableAll(): void {
     const services = store.get('services');
 
+    // Force-stage every service for enabling in a single batch.
+    // Uses setPendingChange (not togglePendingChange) so repeated clicks
+    // never accidentally un-stage a service.
     services.forEach((s) => {
-      store.togglePendingChange(s.id, ChangeAction.Enable);
+      store.setPendingChange(s.id, ChangeAction.Enable);
     });
 
-    showToast('info', `Marked ${services.length} services for enabling. Click Apply Changes to proceed.`);
+    const count = services.length;
+    showToast('info', `Marked ${count} service${count !== 1 ? 's' : ''} for enabling. Click Apply Changes to proceed.`);
   }
 
   protected onUnmount(): void {

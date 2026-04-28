@@ -6,7 +6,7 @@
  * - Logs every command in structured format
  */
 
-import { execFile, exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { SHELL_TIMEOUT_MS } from '../../shared/constants.js';
 import type { Result } from '../../shared/types.js';
@@ -150,26 +150,32 @@ export async function sudoExec(
   args: string[],
   context: string,
 ): Promise<Result<ShellResult>> {
-  // Combine command and args into a single string for shell
-  const fullCommand = [command, ...args].map(a => "'" + a.replace(/'/g, "'\\''") + "'").join(' ');
-  
-  // Prepare osascript. Use double quotes for the inner shell script.
-  const osaScript = `do shell script "${fullCommand.replace(/"/g, '\\"')}" with administrator privileges`;
+  // Build a POSIX-safe quoted command string for the inner shell
+  const quotedParts = [command, ...args].map(
+    (a) => "'" + a.replace(/'/g, "'\\''") + "'",
+  );
+  const fullCommand = quotedParts.join(' ');
+
+  // Pass the script as a direct argument to osascript — no outer shell quoting needed
+  const osaScript = `do shell script "${fullCommand.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}" with administrator privileges`;
 
   logger.info(context, `Requesting sudo for: ${command}`, { args });
 
   return new Promise((resolve) => {
-    exec(`/usr/bin/osascript -e '${osaScript}'`, (error, stdout, stderr) => {
-      const exitCode = error ? (error.code || 1) : 0;
-      
+    // Use execFile so the osaScript string is passed as a raw argument,
+    // completely bypassing shell quoting issues.
+    execFile('/usr/bin/osascript', ['-e', osaScript], (error, stdout, stderr) => {
+      const rawCode = error ? (error as NodeJS.ErrnoException).code : undefined;
+      const exitCode = error ? (typeof rawCode === 'number' ? rawCode : 1) : 0;
+
       if (exitCode === 0) {
-        resolve({ success: true, data: { stdout, stderr, exitCode: 0 } });
+        resolve({ success: true, data: { stdout: stdout.trim(), stderr: stderr.trim(), exitCode: 0 } });
       } else {
         logger.error(context, `Sudo command failed (exit ${exitCode})`, { command, stderr });
-        resolve({ 
-          success: false, 
-          error: stderr || 'Sudo execution failed or was cancelled', 
-          code: String(exitCode) 
+        resolve({
+          success: false,
+          error: stderr || 'Sudo execution failed or was cancelled',
+          code: String(exitCode),
         });
       }
     });

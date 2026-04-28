@@ -7,7 +7,7 @@
 
 import fs from 'fs';
 import os from 'os';
-import { safeExec, safeExecOutput } from '../utils/shell.js';
+import { safeExec, safeExecOutput, sudoExec } from '../utils/shell.js';
 import { logger } from '../utils/logger.js';
 import type { Result } from '../../shared/types.js';
 import { ServiceState } from '../../shared/types.js';
@@ -161,16 +161,19 @@ export class LaunchctlService {
    * Returns success if Step 1 succeeded. Step 2 is best-effort.
    *
    * @param bundleId - The launchd bundle ID to disable
+   * @param requiresAdmin - Whether to elevate via osascript (sudo prompt)
    */
-  public async disableService(bundleId: string): Promise<Result<void>> {
+  public async disableService(bundleId: string, requiresAdmin = false): Promise<Result<void>> {
     logger.info(CONTEXT, `Disabling service: ${bundleId}`);
 
     const uid = process.getuid?.() ?? 501;
     const plistInfo = this.resolvePlist(bundleId);
     const domain = plistInfo !== null ? plistInfo.domain : `gui/${uid}`;
 
+    const exec = requiresAdmin ? sudoExec : safeExec;
+
     // Step 1 — persist: launchctl disable {domain}/{bundleId}
-    const disableResult = await safeExec(
+    const disableResult = await exec(
       LAUNCHCTL,
       ['disable', `${domain}/${bundleId}`],
       CONTEXT,
@@ -183,6 +186,7 @@ export class LaunchctlService {
     }
 
     // Step 2 — stop now (best-effort): launchctl bootout {domain}/{bundleId}
+    // Always safeExec — bootout is best-effort and doesn't need elevation
     const bootoutResult = await safeExec(
       LAUNCHCTL,
       ['bootout', `${domain}/${bundleId}`],
@@ -228,16 +232,19 @@ export class LaunchctlService {
    * Returns success if Step 1 succeeded.
    *
    * @param bundleId - The launchd bundle ID to enable
+   * @param requiresAdmin - Whether to elevate via osascript (sudo prompt)
    */
-  public async enableService(bundleId: string): Promise<Result<void>> {
+  public async enableService(bundleId: string, requiresAdmin = false): Promise<Result<void>> {
     logger.info(CONTEXT, `Enabling service: ${bundleId}`);
 
     const uid = process.getuid?.() ?? 501;
     const plistInfo = this.resolvePlist(bundleId);
     const domain = plistInfo !== null ? plistInfo.domain : `gui/${uid}`;
 
+    const exec = requiresAdmin ? sudoExec : safeExec;
+
     // Step 1 — un-persist: launchctl enable {domain}/{bundleId}
-    const enableResult = await safeExec(
+    const enableResult = await exec(
       LAUNCHCTL,
       ['enable', `${domain}/${bundleId}`],
       CONTEXT,
@@ -255,11 +262,13 @@ export class LaunchctlService {
     logger.info(CONTEXT, `enable step succeeded for ${bundleId}`);
 
     // Step 2 — start now (best-effort): launchctl bootstrap {domain} {plistPath}
+    // Always safeExec — bootstrap is best-effort and doesn't need elevation
     if (plistInfo !== null) {
       const bootstrapResult = await safeExec(
         LAUNCHCTL,
         ['bootstrap', domain, plistInfo.path],
         CONTEXT,
+        ['5'], // Ignore exit 5 (I/O error = service already loaded in current session)
       );
 
       if (!bootstrapResult.success) {

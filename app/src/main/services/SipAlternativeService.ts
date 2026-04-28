@@ -9,7 +9,7 @@
  * Also handles state-checking via the alternative's stateCheck fields.
  */
 
-import { safeExec, safeExecOutput } from '../utils/shell.js';
+import { safeExec, safeExecOutput, sudoExec } from '../utils/shell.js';
 import { logger } from '../utils/logger.js';
 import type { Result, SipAlternative } from '../../shared/types.js';
 import { ServiceState } from '../../shared/types.js';
@@ -34,14 +34,16 @@ export class SipAlternativeService {
    *
    * @param alt - The SipAlternative definition from the service registry
    * @param serviceId - The service ID for logging
+   * @param requiresAdmin - Whether to elevate via osascript (sudo prompt)
    */
-  public async disable(alt: SipAlternative, serviceId: string): Promise<Result<void>> {
+  public async disable(alt: SipAlternative, serviceId: string, requiresAdmin = false): Promise<Result<void>> {
     logger.info(CONTEXT, `Disabling via SIP alternative: ${serviceId}`, {
       mechanism: alt.mechanism,
       cmd: `${alt.disableCmd} ${alt.disableArgs.join(' ')}`,
     });
 
-    const result = await safeExec(alt.disableCmd, alt.disableArgs, CONTEXT);
+    const exec = requiresAdmin ? sudoExec : safeExec;
+    const result = await exec(alt.disableCmd, alt.disableArgs, CONTEXT);
 
     if (!result.success) {
       logger.error(CONTEXT, `SIP alternative disable failed for ${serviceId}`, {
@@ -63,14 +65,16 @@ export class SipAlternativeService {
    *
    * @param alt - The SipAlternative definition from the service registry
    * @param serviceId - The service ID for logging
+   * @param requiresAdmin - Whether to elevate via osascript (sudo prompt)
    */
-  public async enable(alt: SipAlternative, serviceId: string): Promise<Result<void>> {
+  public async enable(alt: SipAlternative, serviceId: string, requiresAdmin = false): Promise<Result<void>> {
     logger.info(CONTEXT, `Enabling via SIP alternative: ${serviceId}`, {
       mechanism: alt.mechanism,
       cmd: `${alt.enableCmd} ${alt.enableArgs.join(' ')}`,
     });
 
-    const result = await safeExec(alt.enableCmd, alt.enableArgs, CONTEXT);
+    const exec = requiresAdmin ? sudoExec : safeExec;
+    const result = await exec(alt.enableCmd, alt.enableArgs, CONTEXT);
 
     if (!result.success) {
       logger.error(CONTEXT, `SIP alternative enable failed for ${serviceId}`, {

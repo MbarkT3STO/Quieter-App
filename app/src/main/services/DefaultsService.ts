@@ -3,7 +3,7 @@
  * Manages macOS user defaults (NSUserDefaults) for services controlled via preferences.
  */
 
-import { safeExec, safeExecOutput } from '../utils/shell.js';
+import { safeExec, safeExecOutput, sudoExec } from '../utils/shell.js';
 import { logger } from '../utils/logger.js';
 import type { Result, DefaultsCommand } from '../../shared/types.js';
 import { ServiceState } from '../../shared/types.js';
@@ -51,16 +51,27 @@ export class DefaultsService {
    * @param key - The defaults key
    * @param type - The value type flag (string, bool, int, float)
    * @param value - The value to write
+   * @param requiresAdmin - Whether to elevate via osascript (sudo prompt)
    */
   public async writeValue(
     domain: string,
     key: string,
     type: DefaultsCommand['type'],
     value: string,
+    requiresAdmin = false,
   ): Promise<Result<void>> {
     logger.info(CONTEXT, `Writing defaults: ${domain} ${key} = ${value} (${type})`);
 
-    const result = await safeExec(DEFAULTS, ['write', domain, key, `-${type}`, value], CONTEXT);
+    // For bool type, convert '0'/'1' to 'false'/'true' (defaults CLI requirement)
+    let actualValue = value;
+    if (type === 'bool') {
+      if (value === '0') actualValue = 'false';
+      else if (value === '1') actualValue = 'true';
+      // 'true', 'false', 'yes', 'no' pass through unchanged
+    }
+
+    const exec = requiresAdmin ? sudoExec : safeExec;
+    const result = await exec(DEFAULTS, ['write', domain, key, `-${type}`, actualValue], CONTEXT);
 
     if (!result.success) {
       return {
@@ -131,18 +142,20 @@ export class DefaultsService {
    * Disable a service by writing its disabled value.
    *
    * @param cmd - The DefaultsCommand definition
+   * @param requiresAdmin - Whether to elevate via osascript (sudo prompt)
    */
-  public async disableService(cmd: DefaultsCommand): Promise<Result<void>> {
-    return this.writeValue(cmd.domain, cmd.key, cmd.type, cmd.disabledValue);
+  public async disableService(cmd: DefaultsCommand, requiresAdmin = false): Promise<Result<void>> {
+    return this.writeValue(cmd.domain, cmd.key, cmd.type, cmd.disabledValue, requiresAdmin);
   }
 
   /**
    * Enable a service by writing its enabled value (or deleting the key to restore default).
    *
    * @param cmd - The DefaultsCommand definition
+   * @param requiresAdmin - Whether to elevate via osascript (sudo prompt)
    */
-  public async enableService(cmd: DefaultsCommand): Promise<Result<void>> {
+  public async enableService(cmd: DefaultsCommand, requiresAdmin = false): Promise<Result<void>> {
     // Write the explicit enabled value
-    return this.writeValue(cmd.domain, cmd.key, cmd.type, cmd.enabledValue);
+    return this.writeValue(cmd.domain, cmd.key, cmd.type, cmd.enabledValue, requiresAdmin);
   }
 }

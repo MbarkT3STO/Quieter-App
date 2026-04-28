@@ -112,6 +112,21 @@ class Store {
     eventBus.emit('pending:changed', pending);
   }
 
+  /**
+   * Force-set a pending change for a service without toggle-off behaviour.
+   * Skips SIP-protected services that have no alternative command.
+   */
+  public setPendingChange(serviceId: string, action: ChangeAction): void {
+    const svc = this.state.services.find((s) => s.id === serviceId);
+    if (svc?.requiresSip === true && svc.sipAlternative === undefined) return;
+
+    const pending = new Map(this.state.pendingChanges);
+    pending.set(serviceId, action);
+
+    this.set('pendingChanges', pending);
+    eventBus.emit('pending:changed', pending);
+  }
+
   public setPendingTweak(id: string, shouldApply: boolean | null): void {
     const pending = new Map(this.state.pendingTweaks);
     if (shouldApply === null) {

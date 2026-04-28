@@ -304,29 +304,33 @@ export class ServiceManager {
    * Apply a single service change.
    *
    * Routing priority:
-   * 1. If service has a `sipAlternative`, use it (handles SIP-protected & auto-re-enabling services).
+   * 1. If service has a `sipAlternative`, ALWAYS use it — regardless of SIP status.
+   *    These alternatives (e.g. mdutil, defaults writes) are the correct and reliable
+   *    path for these services. launchctl enable/disable on SIP-protected daemons
+   *    fails with "Operation not permitted" even when SIP is disabled, because the
+   *    launchd database for system daemons is protected at the filesystem level.
+   *    - If the service is `requiresSip: true`, the alternative is the ONLY path.
+   *    - If the service has an alternative but is NOT requiresSip, run the alternative
+   *      first, then also run launchctl/defaults for belt-and-suspenders coverage.
    * 2. Otherwise fall through to standard launchctl/defaults.
    *
-   * For SIP services: the alternative is the ONLY path — launchctl will fail.
-   * For non-SIP services with alternatives: try alternative first for robustness,
-   * then also run launchctl/defaults for belt-and-suspenders coverage.
+   * Guard: SIP-protected services with NO alternative cannot be changed at all.
    */
   private async applyChange(service: MacService, action: ChangeAction): Promise<Result<void>> {
     const isDisable = action === ChangeAction.Disable;
-    const sipActive = await this.sipStatus.getSipStatus();
 
     // ── SIP Alternative path ──────────────────────────────────────────────────
-    // Only use alternatives if SIP is ACTIVE. If disabled, launchctl works fine.
-    if (sipActive.success && sipActive.data === true && service.sipAlternative !== undefined) {
+    // Always use the alternative when one is defined — it works regardless of SIP state.
+    if (service.sipAlternative !== undefined) {
       const altResult = isDisable
-        ? await this.sipAlt.disable(service.sipAlternative, service.id)
-        : await this.sipAlt.enable(service.sipAlternative, service.id);
+        ? await this.sipAlt.disable(service.sipAlternative, service.id, service.requiresAdmin)
+        : await this.sipAlt.enable(service.sipAlternative, service.id, service.requiresAdmin);
 
       if (!altResult.success) {
         logger.warn(CONTEXT, `SIP alternative failed for ${service.id}`, {
           error: altResult.error,
         });
-        // If SIP-protected, we can't fall through — return the error
+        // If SIP-protected, the alternative is the only viable path — return the error
         if (service.requiresSip === true) {
           return altResult;
         }
@@ -338,9 +342,8 @@ export class ServiceManager {
       // Non-SIP with alternative: continue to also run standard path for coverage
     }
 
-    // Guard: if SIP is active and this is a SIP-protected service with NO alternative,
-    // we cannot proceed with the standard path as it will fail and cause UI resets.
-    if (sipActive.success && sipActive.data === true && service.requiresSip === true && service.sipAlternative === undefined) {
+    // Guard: SIP-protected service with NO alternative — launchctl will fail regardless.
+    if (service.requiresSip === true && service.sipAlternative === undefined) {
       return {
         success: false,
         error: `Service "${service.name}" is protected by System Integrity Protection (SIP) and has no safe alternative command.`,
@@ -355,8 +358,8 @@ export class ServiceManager {
     ) {
       if (service.launchAgentId !== undefined) {
         const result = isDisable
-          ? await this.launchctl.disableService(service.launchAgentId)
-          : await this.launchctl.enableService(service.launchAgentId);
+          ? await this.launchctl.disableService(service.launchAgentId, service.requiresAdmin)
+          : await this.launchctl.enableService(service.launchAgentId, service.requiresAdmin);
 
         if (!result.success && service.controlMethod === ControlMethod.Launchctl) {
           return result;
@@ -371,8 +374,8 @@ export class ServiceManager {
     ) {
       if (service.defaultsCommand !== undefined) {
         const result = isDisable
-          ? await this.defaults.disableService(service.defaultsCommand)
-          : await this.defaults.enableService(service.defaultsCommand);
+          ? await this.defaults.disableService(service.defaultsCommand, service.requiresAdmin)
+          : await this.defaults.enableService(service.defaultsCommand, service.requiresAdmin);
 
         if (!result.success) return result;
       }

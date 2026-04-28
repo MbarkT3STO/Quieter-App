@@ -686,7 +686,8 @@ const privacyServices: MacService[] = [
     enableEffect: 'System analytics data will no longer be collected or sent to Apple.',
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
-    requiresAdmin: false,
+    requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://support.apple.com/en-us/HT202100
   },
   {
@@ -736,7 +737,7 @@ const syncServices: MacService[] = [
       'and local changes will not upload to iCloud.',
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
-    requiresAdmin: false,
+    requiresAdmin: true,
     requiresSip: true,
     // sourceUrl: https://support.apple.com/guide/mac-help/store-files-in-icloud-drive-sysp4ee93f4/mac
   },
@@ -759,7 +760,7 @@ const syncServices: MacService[] = [
       'not update in the Photos app.',
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
-    requiresAdmin: false,
+    requiresAdmin: true,
     requiresSip: true,
     // sourceUrl: https://support.apple.com/guide/photos/icloud-photos-pht6d60b4a9/mac
   },
@@ -1228,7 +1229,8 @@ const additionalPrivacyServices: MacService[] = [
       'Siri context awareness and activity-based suggestions will be less accurate.',
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
-    requiresAdmin: false,
+    requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://github.com/Wamphyre/macOS_Silverback-Debloater
   },
   {
@@ -1698,7 +1700,8 @@ const highImpactServices: MacService[] = [
       'network operations may not complete reliably.',
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
-    requiresAdmin: false,
+    requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://iboysoft.com/wiki/nsurlsessiond.html
   },
   {
@@ -1744,7 +1747,8 @@ const highImpactServices: MacService[] = [
       'historical graphs may be less accurate.',
     defaultState: ServiceState.Enabled,
     requiresRestart: false,
-    requiresAdmin: false,
+    requiresAdmin: true,
+    requiresSip: true,
     // sourceUrl: https://macsecurity.net/view/521-sysmond-high-cpu-problem-mac
   },
   {
